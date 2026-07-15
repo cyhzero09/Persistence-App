@@ -18,6 +18,32 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   int get schemaVersion => 1;
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) async {
+        await m.createAll();
+        await _seedDefaultCategories();
+      },
+    );
+  }
+
+  Future<void> _seedDefaultCategories() async {
+    final defaults = [
+      ('運動', '🏃'),
+      ('閱讀', '📚'),
+      ('喝水', '💧'),
+      ('冥想', '🧘'),
+    ];
+    for (final (name, emoji) in defaults) {
+      await into(checkInCategories).insert(CheckInCategoriesCompanion.insert(
+        name: name,
+        emoji: emoji,
+        isDefault: const Value(true),
+      ));
+    }
+  }
 }
 
 LazyDatabase _openConnection() {
