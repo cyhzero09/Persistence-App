@@ -21,7 +21,12 @@ class RemindersPage extends ConsumerWidget {
             ? const Center(child: Text('尚無提醒'))
             : ListView.builder(
                 itemCount: reminders.length,
-                itemBuilder: (_, i) => _ReminderTile(reminder: reminders[i]),
+                itemBuilder: (_, i) => Dismissible(
+                  key: ValueKey(reminders[i].id),
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (_) => ref.read(reminderNotifierProvider).deleteReminder(reminders[i].id),
+                  child: _ReminderTile(reminder: reminders[i]),
+                ),
               ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => const Center(child: Text('載入失敗')),

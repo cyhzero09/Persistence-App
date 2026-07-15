@@ -55,21 +55,24 @@ class TimelinePage extends ConsumerWidget {
       body: timelineAsync.when(
         data: (items) => items.isEmpty
             ? const Center(child: Text('尚無紀錄'))
-            : ListView.builder(
-                itemCount: items.length,
-                itemBuilder: (_, i) {
-                  final item = items[i];
-                  return ListTile(
-                    leading: Icon(
-                      item.type == 'checkin' ? Icons.check_circle : Icons.book,
-                      color: item.type == 'checkin'
-                          ? (item.isCompleted ? Colors.green : Colors.grey)
-                          : Colors.blue,
-                    ),
-                    title: Text(item.title),
-                    subtitle: Text('${item.date}${item.subtitle != null ? ' - ${item.subtitle}' : ''}'),
-                  );
-                },
+            : RefreshIndicator(
+                onRefresh: () => ref.refresh(timelineProvider.future),
+                child: ListView.builder(
+                  itemCount: items.length,
+                  itemBuilder: (_, i) {
+                    final item = items[i];
+                    return ListTile(
+                      leading: Icon(
+                        item.type == 'checkin' ? Icons.check_circle : Icons.book,
+                        color: item.type == 'checkin'
+                            ? (item.isCompleted ? Colors.green : Colors.grey)
+                            : Colors.blue,
+                      ),
+                      title: Text(item.title),
+                      subtitle: Text('${item.date}${item.subtitle != null ? ' - ${item.subtitle}' : ''}'),
+                    );
+                  },
+                ),
               ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => const Center(child: Text('載入失敗')),

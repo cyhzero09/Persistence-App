@@ -85,15 +85,16 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _toggleCheckIn(int categoryId, String dateStr, bool completed, dynamic existing) async {
+    if (!completed && existing == null) return;
     final db = ref.read(databaseProvider);
     if (existing != null) {
       await (db.update(db.checkInRecords)
-        ..where((t) => t.id.equals(existing.id))).write(const CheckInRecordsCompanion(isCompleted: Value(true)));
+        ..where((t) => t.id.equals(existing.id))).write(CheckInRecordsCompanion(isCompleted: Value(completed)));
     } else {
       await db.into(db.checkInRecords).insert(CheckInRecordsCompanion.insert(
         categoryId: categoryId,
         date: dateStr,
-        isCompleted: const Value(true),
+        isCompleted: Value(completed),
       ));
     }
     ref.invalidate(checkInRecordsForDateProvider(dateStr));
