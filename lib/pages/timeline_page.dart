@@ -5,6 +5,6 @@ class TimelinePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Timeline'));
+    return const Center(child: Text('時間軸'));
   }
 }

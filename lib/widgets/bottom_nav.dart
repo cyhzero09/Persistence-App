@@ -16,11 +16,11 @@ class BottomNav extends StatelessWidget {
       currentIndex: currentIndex,
       onTap: onTap,
       items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.timeline), label: 'Timeline'),
-        BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Diary'),
-        BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Reminders'),
-        BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: '首頁'),
+        BottomNavigationBarItem(icon: Icon(Icons.timeline), label: '時間軸'),
+        BottomNavigationBarItem(icon: Icon(Icons.book), label: '日記'),
+        BottomNavigationBarItem(icon: Icon(Icons.notifications), label: '提醒'),
+        BottomNavigationBarItem(icon: Icon(Icons.settings), label: '設定'),
       ],
     );
   }

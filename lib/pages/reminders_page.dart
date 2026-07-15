@@ -5,6 +5,6 @@ class RemindersPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Reminders'));
+    return const Center(child: Text('提醒'));
   }
 }
