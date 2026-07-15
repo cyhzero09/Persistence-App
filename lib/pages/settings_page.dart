@@ -61,10 +61,10 @@ class SettingsPage extends ConsumerWidget {
           ),
           const Divider(),
           const _SectionHeader(title: '帳號'),
-          ListTile(
-            leading: const Icon(Icons.login),
-            title: const Text('登入 Google 帳號'),
-            subtitle: const Text('即將推出'),
+          const ListTile(
+            leading: Icon(Icons.login),
+            title: Text('登入 Google 帳號'),
+            subtitle: Text('即將推出'),
             enabled: false,
           ),
         ],
@@ -124,6 +124,7 @@ class SettingsPage extends ConsumerWidget {
                   emoji: emoji,
                 ));
                 ref.invalidate(categoriesProvider);
+                if (!ctx.mounted) return;
                 Navigator.pop(ctx);
               },
               child: const Text('新增'),
@@ -165,6 +166,7 @@ class SettingsPage extends ConsumerWidget {
     final dir = Directory('/tmp');
     final file = File('${dir.path}/daily_tracker_backup.json');
     if (!await file.exists()) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('找不到備份檔案')),
       );
@@ -203,7 +205,7 @@ class SettingsPage extends ConsumerWidget {
       final m = Reminder.fromJson(r as Map<String, dynamic>);
       await db.into(db.reminders).insert(RemindersCompanion.insert(
         title: m.title, reminderDateTime: m.dateTime, isCompleted: Value(m.isCompleted),
-        categoryId: m.categoryId != null ? Value(m.categoryId!) : Value.absent(),
+        categoryId: m.categoryId != null ? Value(m.categoryId!) : const Value.absent(),
       ));
     }
 
