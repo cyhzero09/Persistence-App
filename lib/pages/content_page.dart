@@ -117,10 +117,10 @@ class _CategoriesTab extends ConsumerWidget {
     String emoji = '📌';
     TimeOfDay? startTime;
     bool addReminder = false;
-    DateTime reminderTime = DateTime.now().add(const Duration(hours: 9));
+    DateTime reminderStart = DateTime.now();
+    TimeOfDay? reminderTime;
     final selectedWeekdays = <int>{};
-    bool isForever = true;
-    DateTime? repeatEndDate;
+    DateTime? reminderEndDate;
 
     bool emojiExpanded = false;
 
@@ -213,13 +213,40 @@ class _CategoriesTab extends ConsumerWidget {
                   const SizedBox(height: 8),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(DateFormat('HH:mm', 'zh-TW').format(reminderTime)),
-                    leading: const Icon(Icons.access_time),
+                    title: Text('開始：${DateFormat('yyyy/M/d', 'zh-TW').format(reminderStart)}'),
+                    leading: const Icon(Icons.calendar_today),
                     onTap: () async {
-                      final tm = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(reminderTime));
-                      if (tm != null) setDialogState(() => reminderTime = DateTime(reminderTime.year, reminderTime.month, reminderTime.day, tm.hour, tm.minute));
+                      final dt = await showDatePicker(
+                        context: context,
+                        initialDate: reminderStart,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 3650)),
+                      );
+                      if (dt != null) setDialogState(() => reminderStart = dt);
                     },
                   ),
+                  Row(
+                    children: [
+                      const Text('設定時間'),
+                      Switch(
+                        value: reminderTime != null,
+                        onChanged: (v) => setDialogState(() {
+                          reminderTime = v ? TimeOfDay.now() : null;
+                        }),
+                      ),
+                    ],
+                  ),
+                  if (reminderTime != null)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('⏰ ${reminderTime!.format(context)}'),
+                      leading: const Icon(Icons.access_time),
+                      onTap: () async {
+                        final tm = await showTimePicker(context: context, initialTime: reminderTime!);
+                        if (tm != null) setDialogState(() => reminderTime = tm);
+                      },
+                    ),
+                  const SizedBox(height: 4),
                   const Text('重複：', style: TextStyle(fontSize: 13)),
                   const SizedBox(height: 4),
                   Wrap(
@@ -235,19 +262,24 @@ class _CategoriesTab extends ConsumerWidget {
                     )),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Text('結束：'),
-                      TextButton(
-                        onPressed: () => setDialogState(() {
-                          isForever = !isForever;
-                          if (!isForever && repeatEndDate == null) {
-                            repeatEndDate = DateTime.now().add(const Duration(days: 30));
-                          }
-                        }),
-                        child: Text(isForever ? '永遠' : DateFormat('yyyy/M/d').format(repeatEndDate ?? DateTime.now().add(const Duration(days: 30)))),
-                      ),
-                    ],
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(reminderEndDate != null
+                        ? '結束：${DateFormat('yyyy/M/d', 'zh-TW').format(reminderEndDate!)}'
+                        : '結束日期（可選）'),
+                    trailing: reminderEndDate != null
+                        ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setDialogState(() => reminderEndDate = null))
+                        : null,
+                    leading: const Icon(Icons.event),
+                    onTap: () async {
+                      final dt = await showDatePicker(
+                        context: context,
+                        initialDate: reminderEndDate ?? reminderStart.add(const Duration(days: 30)),
+                        firstDate: reminderStart,
+                        lastDate: DateTime.now().add(const Duration(days: 3650)),
+                      );
+                      if (dt != null) setDialogState(() => reminderEndDate = dt);
+                    },
                   ),
                 ],
               ],
@@ -266,11 +298,14 @@ class _CategoriesTab extends ConsumerWidget {
                 ));
                 if (addReminder) {
                   final weekdaysStr = selectedWeekdays.isNotEmpty ? selectedWeekdays.join(',') : null;
+                  final reminderDt = reminderTime != null
+                      ? DateTime(reminderStart.year, reminderStart.month, reminderStart.day, reminderTime!.hour, reminderTime!.minute)
+                      : reminderStart;
                   await db.into(db.reminders).insert(RemindersCompanion.insert(
                     title: nameController.text.trim(),
-                    reminderDateTime: reminderTime.toIso8601String(),
+                    reminderDateTime: reminderDt.toIso8601String(),
                     repeatWeekdays: weekdaysStr != null ? Value(weekdaysStr) : const Value.absent(),
-                    repeatEndDate: isForever ? const Value.absent() : Value(DateFormat('yyyy-MM-dd').format(repeatEndDate!)),
+                    repeatEndDate: reminderEndDate != null ? Value(DateFormat('yyyy-MM-dd').format(reminderEndDate!)) : const Value.absent(),
                     categoryId: Value(catId),
                   ));
                 }

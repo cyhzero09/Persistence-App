@@ -17,7 +17,7 @@ class WeekCalendar extends StatelessWidget {
   Widget build(BuildContext context) {
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
-    final sunday = _sundayOf(selectedDate);
+    final sunday = _sundayOf(today);
 
     return Column(
       children: [

@@ -70,6 +70,12 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     return Scaffold(
       appBar: AppBar(
         title: Text(DateFormat('M 月 d 日 EEEE', 'zh-TW').format(_selectedDate)),
+        actions: [
+          IconButton(
+            icon: Icon(_expanded ? Icons.unfold_less : Icons.unfold_more),
+            onPressed: () => setState(() => _expanded = !_expanded),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -191,23 +197,6 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                _expanded
-                    ? DateFormat('yyyy 年 M 月', 'zh-TW').format(_selectedDate)
-                    : DateFormat('M 月 d 日', 'zh-TW').format(_selectedDate),
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            IconButton(
-              icon: Icon(_expanded ? Icons.unfold_less : Icons.unfold_more),
-              onPressed: () => setState(() => _expanded = !_expanded),
-            ),
-          ],
-        ),
         if (_expanded)
           TableCalendar(
             firstDay: DateTime(2024),
