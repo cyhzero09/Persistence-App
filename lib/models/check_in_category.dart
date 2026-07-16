@@ -2,12 +2,14 @@ class CheckInCategory {
   final int id;
   final String name;
   final String emoji;
+  final String? description;
   final bool isDefault;
 
   const CheckInCategory({
     required this.id,
     required this.name,
     required this.emoji,
+    this.description,
     this.isDefault = false,
   });
 
@@ -15,6 +17,7 @@ class CheckInCategory {
     'id': id,
     'name': name,
     'emoji': emoji,
+    'description': description,
     'isDefault': isDefault,
   };
 
@@ -22,6 +25,7 @@ class CheckInCategory {
     id: json['id'] as int,
     name: json['name'] as String,
     emoji: json['emoji'] as String,
+    description: json['description'] as String?,
     isDefault: json['isDefault'] as bool? ?? false,
   );
 }

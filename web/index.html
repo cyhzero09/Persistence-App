@@ -29,8 +29,17 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>persistence_app</title>
+  <title>日常追蹤</title>
   <link rel="manifest" href="manifest.json">
+  <script src="sql.js/sql-wasm.js"></script>
+  <script>
+    var realInitSqlJs = initSqlJs;
+    initSqlJs = function(config) {
+      config = config || {};
+      config.locateFile = function(file) { return 'sql.js/' + file; };
+      return realInitSqlJs(config);
+    };
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

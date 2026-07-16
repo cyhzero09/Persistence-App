@@ -9,53 +9,80 @@ import '../providers/database_provider.dart';
 import '../providers/check_in_provider.dart';
 import '../providers/diary_provider.dart';
 import '../providers/reminder_provider.dart';
+import '../providers/app_settings_provider.dart';
 import '../models/check_in_category.dart';
 import '../models/check_in_record.dart';
 import '../models/diary_entry.dart';
 import '../models/reminder.dart';
+import '../app_version.dart';
+import '../update_checker.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
+  static const themeColors = [
+    (0xFF009688, 'Teal'),
+    (0xFF1976D2, 'Blue'),
+    (0xFF388E3C, 'Green'),
+    (0xFFE64A19, 'Orange'),
+    (0xFF7B1FA2, 'Purple'),
+    (0xFFD32F2F, 'Red'),
+    (0xFF512DA8, 'Deep Purple'),
+    (0xFF00796B, 'Dark Teal'),
+    (0xFFF57C00, 'Amber'),
+    (0xFF5C6BC0, 'Indigo'),
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categoriesAsync = ref.watch(categoriesProvider);
+    final settings = ref.watch(appSettingsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('設定')),
       body: ListView(
         children: [
-          const _SectionHeader(title: '打卡項目'),
-          categoriesAsync.when(
-            data: (cats) => Column(
-              children: [
-                ...cats.map((cat) => ListTile(
-                  leading: Text(cat.emoji, style: const TextStyle(fontSize: 24)),
-                  title: Text(cat.name),
-                  subtitle: cat.isDefault ? const Text('預設') : null,
-                  trailing: cat.isDefault ? null : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined),
-                        onPressed: () => _showEditCategoryDialog(context, ref, cat),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () => _deleteCategory(ref, cat.id),
-                      ),
-                    ],
-                  ),
-                )),
-              ],
+          const _SectionHeader(title: '外觀'),
+          ListTile(
+            leading: const Icon(Icons.palette),
+            title: const Text('主題顏色'),
+            subtitle: Text(
+              themeColors.firstWhere((c) => c.$1 == settings.themeColor, orElse: () => (0xFF009688, 'Teal')).$2,
             ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, __) => const Center(child: Text('載入失敗')),
+            onTap: () => _showColorPicker(context, ref, settings.themeColor),
           ),
           ListTile(
-            leading: const Icon(Icons.add),
-            title: const Text('新增項目'),
-            onTap: () => _showAddCategoryDialog(context, ref),
+            leading: const Icon(Icons.dark_mode),
+            title: const Text('深色模式'),
+            subtitle: Text(
+              switch (settings.brightness) {
+                ThemeMode.light => '白色',
+                ThemeMode.dark => '黑色',
+                ThemeMode.system => '跟隨系統',
+              },
+            ),
+            onTap: () => _showBrightnessPicker(context, ref),
+          ),
+          ListTile(
+            leading: const Icon(Icons.text_fields),
+            title: const Text('字體大小'),
+            subtitle: Text('${(settings.fontSize * 100).toInt()}%'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.remove),
+                  onPressed: settings.fontSize > 0.7
+                      ? () => ref.read(appSettingsProvider.notifier).setFontSize(settings.fontSize - 0.1)
+                      : null,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: settings.fontSize < 1.5
+                      ? () => ref.read(appSettingsProvider.notifier).setFontSize(settings.fontSize + 0.1)
+                      : null,
+                ),
+              ],
+            ),
           ),
           const Divider(),
           const _SectionHeader(title: '資料管理'),
@@ -70,6 +97,14 @@ class SettingsPage extends ConsumerWidget {
             onTap: () => _importData(context, ref),
           ),
           const Divider(),
+          const _SectionHeader(title: '更新'),
+          ListTile(
+            leading: const Icon(Icons.system_update),
+            title: const Text('檢查更新'),
+            subtitle: const Text(appVersion),
+            onTap: () => _checkUpdate(context),
+          ),
+          const Divider(),
           const _SectionHeader(title: '帳號'),
           const ListTile(
             leading: Icon(Icons.login),
@@ -77,124 +112,91 @@ class SettingsPage extends ConsumerWidget {
             subtitle: Text('即將推出'),
             enabled: false,
           ),
+          const Divider(),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('版本 $appVersion',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  Future<void> _deleteCategory(WidgetRef ref, int id) async {
-    final db = ref.read(databaseProvider);
-    await (db.delete(db.checkInRecords)..where((t) => t.categoryId.equals(id))).go();
-    await (db.delete(db.checkInCategories)..where((t) => t.id.equals(id))).go();
-    ref.invalidate(categoriesProvider);
-    ref.invalidate(checkInRecordDatesProvider);
-  }
-
-  void _showAddCategoryDialog(BuildContext context, WidgetRef ref) {
-    final nameController = TextEditingController();
-    String emoji = '📌';
+  void _showColorPicker(BuildContext context, WidgetRef ref, int currentColor) {
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('新增打卡項目'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: '名稱', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
-              Text('選擇圖示：$emoji', style: const TextStyle(fontSize: 18)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: '🏃📚💧🧘💪🎵✍️🍎☕🎮📝🛌🎯🌈'.split('').map((e) => GestureDetector(
-                  onTap: () => setDialogState(() => emoji = e),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: emoji == e ? Colors.teal : Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(e, style: const TextStyle(fontSize: 24)),
+      builder: (ctx) => AlertDialog(
+        title: const Text('選擇主題顏色'),
+        content: SizedBox(
+          width: 280,
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: themeColors.map((c) {
+              final selected = c.$1 == currentColor;
+              return GestureDetector(
+                onTap: () {
+                  ref.read(appSettingsProvider.notifier).setThemeColor(c.$1);
+                  Navigator.pop(ctx);
+                },
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Color(c.$1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: selected ? Border.all(color: Colors.white, width: 3) : null,
+                    boxShadow: selected ? [BoxShadow(color: Color(c.$1).withValues(alpha: 0.5), blurRadius: 8)] : null,
                   ),
-                )).toList(),
-              ),
-            ],
+                  child: selected ? const Icon(Icons.check, color: Colors.white) : null,
+                ),
+              );
+            }).toList(),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-            FilledButton(
-              onPressed: nameController.text.trim().isEmpty ? null : () async {
-                final db = ref.read(databaseProvider);
-                await db.into(db.checkInCategories).insert(CheckInCategoriesCompanion.insert(
-                  name: nameController.text.trim(),
-                  emoji: emoji,
-                ));
-                ref.invalidate(categoriesProvider);
-                if (!ctx.mounted) return;
-                Navigator.pop(ctx);
-              },
-              child: const Text('新增'),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  void _showEditCategoryDialog(BuildContext context, WidgetRef ref, CheckInCategory category) {
-    final nameController = TextEditingController(text: category.name);
-    String emoji = category.emoji;
+  void _showBrightnessPicker(BuildContext context, WidgetRef ref) {
+    final current = ref.read(appSettingsProvider).brightness;
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('編輯打卡項目'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: '名稱', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
-              Text('選擇圖示：$emoji', style: const TextStyle(fontSize: 18)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: '🏃📚💧🧘💪🎵✍️🍎☕🎮📝🛌🎯🌈'.split('').map((e) => GestureDetector(
-                  onTap: () => setDialogState(() => emoji = e),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: emoji == e ? Colors.teal : Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(e, style: const TextStyle(fontSize: 24)),
-                  ),
-                )).toList(),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-            FilledButton(
-              onPressed: nameController.text.trim().isEmpty ? null : () async {
-                final db = ref.read(databaseProvider);
-                await (db.update(db.checkInCategories)
-                  ..where((t) => t.id.equals(category.id)))
-                  .write(CheckInCategoriesCompanion(
-                    name: Value(nameController.text.trim()),
-                    emoji: Value(emoji),
-                  ));
-                ref.invalidate(categoriesProvider);
-                if (!ctx.mounted) return;
+      builder: (ctx) => AlertDialog(
+        title: const Text('深色模式'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.light_mode),
+              title: const Text('白色'),
+              trailing: current == ThemeMode.light ? const Icon(Icons.check) : null,
+              onTap: () {
+                ref.read(appSettingsProvider.notifier).setBrightness(ThemeMode.light);
                 Navigator.pop(ctx);
               },
-              child: const Text('儲存'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.dark_mode),
+              title: const Text('黑色'),
+              trailing: current == ThemeMode.dark ? const Icon(Icons.check) : null,
+              onTap: () {
+                ref.read(appSettingsProvider.notifier).setBrightness(ThemeMode.dark);
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.brightness_auto),
+              title: const Text('跟隨系統'),
+              trailing: current == ThemeMode.system ? const Icon(Icons.check) : null,
+              onTap: () {
+                ref.read(appSettingsProvider.notifier).setBrightness(ThemeMode.system);
+                Navigator.pop(ctx);
+              },
             ),
           ],
         ),
@@ -213,10 +215,10 @@ class SettingsPage extends ConsumerWidget {
       final data = {
         'version': 1,
         'exportDate': DateTime.now().toIso8601String(),
-        'categories': cats.map((r) => CheckInCategory(id: r.id, name: r.name, emoji: r.emoji, isDefault: r.isDefault).toJson()).toList(),
+        'categories': cats.map((r) => CheckInCategory(id: r.id, name: r.name, emoji: r.emoji, description: r.description, isDefault: r.isDefault).toJson()).toList(),
         'records': records.map((r) => CheckInRecord(id: r.id, categoryId: r.categoryId, date: r.date, isCompleted: r.isCompleted, note: r.note).toJson()).toList(),
-        'diaries': diaries.map((r) => DiaryEntry(id: r.id, date: r.date, content: r.content, checkInRecordId: r.checkInRecordId).toJson()).toList(),
-        'reminders': reminders.map((r) => Reminder(id: r.id, title: r.title, dateTime: r.reminderDateTime, categoryId: r.categoryId, isCompleted: r.isCompleted).toJson()).toList(),
+        'diaries': diaries.map((r) => DiaryEntry(id: r.id, date: r.date, title: r.title, content: r.content, checkInRecordId: r.checkInRecordId).toJson()).toList(),
+        'reminders': reminders.map((r) => Reminder(id: r.id, title: r.title, dateTime: r.reminderDateTime, repeatWeekdays: r.repeatWeekdays, repeatEndDate: r.repeatEndDate, categoryId: r.categoryId, isCompleted: r.isCompleted).toJson()).toList(),
       };
 
       final dir = await getApplicationDocumentsDirectory();
@@ -234,6 +236,40 @@ class SettingsPage extends ConsumerWidget {
           SnackBar(content: Text('匯出失敗：$e')),
         );
       }
+    }
+  }
+
+  Future<void> _checkUpdate(BuildContext context) async {
+    final result = await checkForUpdates(appVersion);
+    if (!context.mounted) return;
+    if (result.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.error!)));
+      return;
+    }
+    if (result.hasUpdate) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('發現新版本'),
+          content: Text('目前版本：$appVersion\n最新版本：${result.latestVersion}'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('關閉')),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('請至 GitHub Releases 下載新版本')),
+                );
+              },
+              child: const Text('前往下載'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('目前為最新版本')),
+      );
     }
   }
 
@@ -260,7 +296,7 @@ class SettingsPage extends ConsumerWidget {
       for (final c in json['categories'] as List) {
         final m = CheckInCategory.fromJson(c as Map<String, dynamic>);
         await db.into(db.checkInCategories).insert(CheckInCategoriesCompanion.insert(
-          name: m.name, emoji: m.emoji, isDefault: Value(m.isDefault),
+          name: m.name, emoji: m.emoji, description: m.description != null ? Value(m.description!) : const Value.absent(), isDefault: Value(m.isDefault),
         ));
       }
       for (final r in json['records'] as List) {
@@ -272,13 +308,15 @@ class SettingsPage extends ConsumerWidget {
       for (final d in json['diaries'] as List) {
         final m = DiaryEntry.fromJson(d as Map<String, dynamic>);
         await db.into(db.diaryEntries).insert(DiaryEntriesCompanion.insert(
-          date: m.date, content: m.content, checkInRecordId: Value(m.checkInRecordId),
+          date: m.date, title: m.title != null ? Value(m.title!) : const Value.absent(), content: m.content, checkInRecordId: Value(m.checkInRecordId),
         ));
       }
       for (final r in json['reminders'] as List) {
         final m = Reminder.fromJson(r as Map<String, dynamic>);
         await db.into(db.reminders).insert(RemindersCompanion.insert(
-          title: m.title, reminderDateTime: m.dateTime, isCompleted: Value(m.isCompleted),
+          title: m.title, reminderDateTime: m.dateTime, repeatWeekdays: m.repeatWeekdays != null ? Value(m.repeatWeekdays!) : const Value.absent(),
+          repeatEndDate: m.repeatEndDate != null ? Value(m.repeatEndDate!) : const Value.absent(),
+          isCompleted: Value(m.isCompleted),
           categoryId: m.categoryId != null ? Value(m.categoryId!) : const Value.absent(),
         ));
       }

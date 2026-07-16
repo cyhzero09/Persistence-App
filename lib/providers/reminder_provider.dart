@@ -12,6 +12,8 @@ final remindersProvider = FutureProvider<List<Reminder>>((ref) async {
     id: r.id,
     title: r.title,
     dateTime: r.reminderDateTime,
+    repeatWeekdays: r.repeatWeekdays,
+    repeatEndDate: r.repeatEndDate,
     categoryId: r.categoryId,
     isCompleted: r.isCompleted,
   )).toList();

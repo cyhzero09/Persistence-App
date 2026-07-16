@@ -17,9 +17,7 @@ class BottomNav extends StatelessWidget {
       onDestinationSelected: onTap,
       destinations: const [
         NavigationDestination(icon: Icon(Icons.today), label: '首頁'),
-        NavigationDestination(icon: Icon(Icons.timeline), label: '時間軸'),
-        NavigationDestination(icon: Icon(Icons.book), label: '日記'),
-        NavigationDestination(icon: Icon(Icons.notifications), label: '提醒'),
+        NavigationDestination(icon: Icon(Icons.dashboard), label: '內容'),
         NavigationDestination(icon: Icon(Icons.settings), label: '設定'),
       ],
     );

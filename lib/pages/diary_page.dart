@@ -36,7 +36,7 @@ class DiaryPage extends ConsumerWidget {
                 },
               ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => const Center(child: Text('載入失敗')),
+        error: (e, _) => Center(child: Text('$e')),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(context, MaterialPageRoute(

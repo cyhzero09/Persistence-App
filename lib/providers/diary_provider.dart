@@ -10,6 +10,7 @@ final diaryEntriesProvider = FutureProvider<List<DiaryEntry>>((ref) async {
   return rows.map((r) => DiaryEntry(
     id: r.id,
     date: r.date,
+    title: r.title,
     content: r.content,
     checkInRecordId: r.checkInRecordId,
   )).toList();
