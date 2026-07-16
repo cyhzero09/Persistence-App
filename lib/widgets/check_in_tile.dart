@@ -11,6 +11,8 @@ class CheckInTile extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
+  static const _weekdayLabels = ['一', '二', '三', '四', '五', '六', '日'];
+
   const CheckInTile({
     super.key,
     required this.category,
@@ -25,15 +27,21 @@ class CheckInTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitleParts = <String>[];
+    if (category.startTime != null && category.endTime != null) {
+      subtitleParts.add('${category.startTime}-${category.endTime}');
+    }
+    if (category.repeatWeekdays != null && category.repeatWeekdays!.isNotEmpty) {
+      final days = category.repeatWeekdays!.split(',').map((s) => _weekdayLabels[int.parse(s)]).join('');
+      subtitleParts.add('每週 $days');
+    }
     if (record?.completedAt != null) {
       final parts = record!.completedAt!.split(' ');
       if (parts.length >= 2) {
-        subtitleParts.add(parts[1].substring(0, 5));
+        subtitleParts.add('✓ ${parts[1].substring(0, 5)}');
       } else if (parts[0].contains('T')) {
-        subtitleParts.add(parts[0].split('T')[1].substring(0, 5));
+        subtitleParts.add('✓ ${parts[0].split('T')[1].substring(0, 5)}');
       }
     }
-    if (category.startTime != null) subtitleParts.add('⏰ ${category.startTime}');
     if (record?.note != null) subtitleParts.add(record!.note!);
     final completed = record?.isCompleted ?? false;
     return ListTile(

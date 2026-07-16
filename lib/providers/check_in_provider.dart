@@ -13,6 +13,8 @@ final categoriesProvider = FutureProvider<List<CheckInCategory>>((ref) async {
     emoji: r.emoji,
     description: r.description,
     startTime: r.startTime,
+    endTime: r.endTime,
+    repeatWeekdays: r.repeatWeekdays,
     isDefault: r.isDefault,
   )).toList();
 });

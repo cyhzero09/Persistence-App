@@ -4,6 +4,8 @@ class CheckInCategory {
   final String emoji;
   final String? description;
   final String? startTime;
+  final String? endTime;
+  final String? repeatWeekdays;
   final bool isDefault;
 
   const CheckInCategory({
@@ -12,6 +14,8 @@ class CheckInCategory {
     required this.emoji,
     this.description,
     this.startTime,
+    this.endTime,
+    this.repeatWeekdays,
     this.isDefault = false,
   });
 
@@ -21,6 +25,8 @@ class CheckInCategory {
     'emoji': emoji,
     'description': description,
     'startTime': startTime,
+    'endTime': endTime,
+    'repeatWeekdays': repeatWeekdays,
     'isDefault': isDefault,
   };
 
@@ -30,6 +36,10 @@ class CheckInCategory {
     emoji: json['emoji'] as String,
     description: json['description'] as String?,
     startTime: json['startTime'] as String?,
+    endTime: json['endTime'] as String?,
+    repeatWeekdays: json['repeatWeekdays'] as String?,
     isDefault: json['isDefault'] as bool? ?? false,
   );
+
+  bool get isRepeating => repeatWeekdays != null && repeatWeekdays!.isNotEmpty;
 }

@@ -13,7 +13,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -34,6 +34,10 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 4) {
           await m.addColumn(checkInRecords, checkInRecords.completedAt);
+        }
+        if (from < 5) {
+          await m.addColumn(checkInCategories, checkInCategories.endTime);
+          await m.addColumn(checkInCategories, checkInCategories.repeatWeekdays);
         }
       },
     );

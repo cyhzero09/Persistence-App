@@ -116,11 +116,12 @@ class _CategoriesTab extends ConsumerWidget {
     final nameController = TextEditingController();
     final descController = TextEditingController();
     String emoji = '📌';
-    TimeOfDay? startTime;
+    TimeOfDay? catStartTime;
+    TimeOfDay? catEndTime;
+    final catWeekdays = <int>{};
     bool addReminder = false;
     DateTime reminderStart = DateTime.now();
     TimeOfDay? reminderTime;
-    final selectedWeekdays = <int>{};
     DateTime? reminderEndDate;
 
     bool emojiExpanded = false;
@@ -143,18 +144,6 @@ class _CategoriesTab extends ConsumerWidget {
                   controller: descController,
                   maxLines: 2,
                   decoration: const InputDecoration(labelText: '簡介（可選）', border: OutlineInputBorder(), hintText: '例如：每天跑30分鐘'),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(startTime != null ? '⏰ ${startTime!.format(context)}' : '⏰ 設置開始時間（可選）'),
-                  trailing: startTime != null
-                      ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setDialogState(() => startTime = null))
-                      : null,
-                  onTap: () async {
-                    final t = await showTimePicker(context: context, initialTime: TimeOfDay.now());
-                    if (t != null) setDialogState(() => startTime = t);
-                  },
                 ),
                 const SizedBox(height: 12),
                 Text('選擇圖示：$emoji', style: const TextStyle(fontSize: 18)),
@@ -201,9 +190,42 @@ class _CategoriesTab extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(catStartTime != null ? '⏰ 開始 ${catStartTime!.format(context)}' : '⏰ 開始時間（必填）'),
+                  trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
+                    final t = await showTimePicker(context: context, initialTime: catStartTime ?? TimeOfDay.now());
+                    if (t != null) setDialogState(() => catStartTime = t);
+                  }),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(catEndTime != null ? '⏰ 結束 ${catEndTime!.format(context)}' : '⏰ 結束時間（必填）'),
+                  trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
+                    final t = await showTimePicker(context: context, initialTime: catEndTime ?? TimeOfDay.now());
+                    if (t != null) setDialogState(() => catEndTime = t);
+                  }),
+                ),
+                const SizedBox(height: 8),
+                Text('重複天數（必填）：', style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 4,
+                  children: List.generate(7, (i) => FilterChip(
+                    label: Text(['一','二','三','四','五','六','日'][i]),
+                    selected: catWeekdays.contains(i),
+                    onSelected: (v) {
+                      setDialogState(() {
+                        if (v) { catWeekdays.add(i); } else { catWeekdays.remove(i); }
+                      });
+                    },
+                  )),
+                ),
+                const SizedBox(height: 12),
+                const Divider(),
                 Row(
                   children: [
-                    const Text('新增提醒'),
+                    const Text('新增提醒（選填）'),
                     Switch(
                       value: addReminder,
                       onChanged: (v) => setDialogState(() => addReminder = v),
@@ -247,21 +269,6 @@ class _CategoriesTab extends ConsumerWidget {
                         if (tm != null) setDialogState(() => reminderTime = tm);
                       },
                     ),
-                  const SizedBox(height: 4),
-                  const Text('重複：', style: TextStyle(fontSize: 13)),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 4,
-                    children: List.generate(7, (i) => FilterChip(
-                      label: Text(['一','二','三','四','五','六','日'][i]),
-                      selected: selectedWeekdays.contains(i),
-                      onSelected: (v) {
-                        setDialogState(() {
-                          if (v) { selectedWeekdays.add(i); } else { selectedWeekdays.remove(i); }
-                        });
-                      },
-                    )),
-                  ),
                   const SizedBox(height: 8),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -289,23 +296,26 @@ class _CategoriesTab extends ConsumerWidget {
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
             FilledButton(
-              onPressed: nameController.text.trim().isEmpty ? null : () async {
+              onPressed: nameController.text.trim().isEmpty || catStartTime == null || catEndTime == null || catWeekdays.isEmpty
+                  ? null : () async {
                 final db = ref.read(databaseProvider);
+                final weekdaysStr = catWeekdays.join(',');
                 final catId = await db.into(db.checkInCategories).insert(CheckInCategoriesCompanion.insert(
                   name: nameController.text.trim(),
                   emoji: emoji,
                   description: descController.text.trim().isNotEmpty ? Value(descController.text.trim()) : const Value.absent(),
-                  startTime: startTime != null ? Value('${startTime!.hour.toString().padLeft(2, '0')}:${startTime!.minute.toString().padLeft(2, '0')}') : const Value.absent(),
+                  startTime: Value('${catStartTime!.hour.toString().padLeft(2, '0')}:${catStartTime!.minute.toString().padLeft(2, '0')}'),
+                  endTime: Value('${catEndTime!.hour.toString().padLeft(2, '0')}:${catEndTime!.minute.toString().padLeft(2, '0')}'),
+                  repeatWeekdays: Value(weekdaysStr),
                 ));
                 if (addReminder) {
-                  final weekdaysStr = selectedWeekdays.isNotEmpty ? selectedWeekdays.join(',') : null;
                   final reminderDt = reminderTime != null
                       ? DateTime(reminderStart.year, reminderStart.month, reminderStart.day, reminderTime!.hour, reminderTime!.minute)
                       : reminderStart;
                   final id = await db.into(db.reminders).insert(RemindersCompanion.insert(
                     title: nameController.text.trim(),
                     reminderDateTime: reminderDt.toIso8601String(),
-                    repeatWeekdays: weekdaysStr != null ? Value(weekdaysStr) : const Value.absent(),
+                    repeatWeekdays: Value(weekdaysStr),
                     repeatEndDate: reminderEndDate != null ? Value(DateFormat('yyyy-MM-dd').format(reminderEndDate!)) : const Value.absent(),
                     categoryId: Value(catId),
                   ));
@@ -335,12 +345,22 @@ class _CategoriesTab extends ConsumerWidget {
     final nameController = TextEditingController(text: category.name);
     final descController = TextEditingController(text: category.description ?? '');
     String emoji = category.emoji;
-    TimeOfDay? startTime = category.startTime != null
+    TimeOfDay? editStartTime = category.startTime != null
         ? TimeOfDay(
             hour: int.parse(category.startTime!.split(':')[0]),
             minute: int.parse(category.startTime!.split(':')[1]),
           )
         : null;
+    TimeOfDay? editEndTime = category.endTime != null
+        ? TimeOfDay(
+            hour: int.parse(category.endTime!.split(':')[0]),
+            minute: int.parse(category.endTime!.split(':')[1]),
+          )
+        : null;
+    final editWeekdays = <int>{};
+    if (category.repeatWeekdays != null) {
+      editWeekdays.addAll(category.repeatWeekdays!.split(',').map(int.parse));
+    }
     bool emojiExpanded = false;
     showDialog(
       context: context,
@@ -360,18 +380,6 @@ class _CategoriesTab extends ConsumerWidget {
                   controller: descController,
                   maxLines: 2,
                   decoration: const InputDecoration(labelText: '簡介（可選）', border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(startTime != null ? '⏰ ${startTime!.format(context)}' : '⏰ 設置開始時間（可選）'),
-                  trailing: startTime != null
-                      ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setDialogState(() => startTime = null))
-                      : null,
-                  onTap: () async {
-                    final t = await showTimePicker(context: context, initialTime: startTime ?? TimeOfDay.now());
-                    if (t != null) setDialogState(() => startTime = t);
-                  },
                 ),
                 const SizedBox(height: 12),
                 Text('選擇圖示：$emoji', style: const TextStyle(fontSize: 18)),
@@ -417,13 +425,46 @@ class _CategoriesTab extends ConsumerWidget {
                       ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(editStartTime != null ? '⏰ 開始 ${editStartTime!.format(context)}' : '⏰ 開始時間（必填）'),
+                  trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
+                    final t = await showTimePicker(context: context, initialTime: editStartTime ?? TimeOfDay.now());
+                    if (t != null) setDialogState(() => editStartTime = t);
+                  }),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(editEndTime != null ? '⏰ 結束 ${editEndTime!.format(context)}' : '⏰ 結束時間（必填）'),
+                  trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
+                    final t = await showTimePicker(context: context, initialTime: editEndTime ?? TimeOfDay.now());
+                    if (t != null) setDialogState(() => editEndTime = t);
+                  }),
+                ),
+                const SizedBox(height: 8),
+                Text('重複天數（必填）：', style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 4,
+                  children: List.generate(7, (i) => FilterChip(
+                    label: Text(['一','二','三','四','五','六','日'][i]),
+                    selected: editWeekdays.contains(i),
+                    onSelected: (v) {
+                      setDialogState(() {
+                        if (v) { editWeekdays.add(i); } else { editWeekdays.remove(i); }
+                      });
+                    },
+                  )),
+                ),
               ],
             ),
           ),
           actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-              FilledButton(
-              onPressed: nameController.text.trim().isEmpty ? null : () async {
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            FilledButton(
+              onPressed: nameController.text.trim().isEmpty || editStartTime == null || editEndTime == null || editWeekdays.isEmpty
+                  ? null : () async {
                 final db = ref.read(databaseProvider);
                 await (db.update(db.checkInCategories)
                   ..where((t) => t.id.equals(category.id)))
@@ -431,7 +472,9 @@ class _CategoriesTab extends ConsumerWidget {
                     name: Value(nameController.text.trim()),
                     emoji: Value(emoji),
                     description: descController.text.trim().isNotEmpty ? Value(descController.text.trim()) : const Value.absent(),
-                    startTime: startTime != null ? Value('${startTime!.hour.toString().padLeft(2, '0')}:${startTime!.minute.toString().padLeft(2, '0')}') : const Value.absent(),
+                    startTime: Value('${editStartTime!.hour.toString().padLeft(2, '0')}:${editStartTime!.minute.toString().padLeft(2, '0')}'),
+                    endTime: Value('${editEndTime!.hour.toString().padLeft(2, '0')}:${editEndTime!.minute.toString().padLeft(2, '0')}'),
+                    repeatWeekdays: Value(editWeekdays.join(',')),
                   ));
                 ref.invalidate(categoriesProvider);
                 if (!ctx.mounted) return;
