@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/check_in_category.dart';
+import '../models/check_in_record.dart';
 
 class CheckInTile extends StatelessWidget {
   final CheckInCategory category;
-  final bool isCompleted;
-  final String? note;
+  final CheckInRecord? record;
   final ValueChanged<bool?> onToggle;
   final VoidCallback onAddNote;
 
   const CheckInTile({
     super.key,
     required this.category,
-    required this.isCompleted,
-    this.note,
+    this.record,
     required this.onToggle,
     required this.onAddNote,
   });
@@ -20,16 +20,21 @@ class CheckInTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitleParts = <String>[];
+    if (record?.completedAt != null) {
+      final dt = DateTime.parse(record!.completedAt!);
+      subtitleParts.add(DateFormat('HH:mm', 'zh-TW').format(dt));
+    }
     if (category.startTime != null) subtitleParts.add('⏰ ${category.startTime}');
-    if (note != null) subtitleParts.add(note!);
+    if (record?.note != null) subtitleParts.add(record!.note!);
+    final completed = record?.isCompleted ?? false;
     return CheckboxListTile(
       title: Text('${category.emoji} ${category.name}'),
       subtitle: subtitleParts.isNotEmpty
-          ? Text(subtitleParts.join('\n'), style: const TextStyle(fontSize: 13))
+          ? Text(subtitleParts.join(' | '), style: const TextStyle(fontSize: 13))
           : null,
-      value: isCompleted,
+      value: completed,
       onChanged: onToggle,
-      secondary: note == null
+      secondary: record?.note == null
           ? IconButton(icon: const Icon(Icons.edit_note, size: 20), onPressed: onAddNote)
           : null,
     );

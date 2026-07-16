@@ -216,7 +216,7 @@ class SettingsPage extends ConsumerWidget {
         'version': 1,
         'exportDate': DateTime.now().toIso8601String(),
         'categories': cats.map((r) => CheckInCategory(id: r.id, name: r.name, emoji: r.emoji, description: r.description, startTime: r.startTime, isDefault: r.isDefault).toJson()).toList(),
-        'records': records.map((r) => CheckInRecord(id: r.id, categoryId: r.categoryId, date: r.date, isCompleted: r.isCompleted, note: r.note).toJson()).toList(),
+        'records': records.map((r) => CheckInRecord(id: r.id, categoryId: r.categoryId, date: r.date, isCompleted: r.isCompleted, note: r.note, completedAt: r.completedAt).toJson()).toList(),
         'diaries': diaries.map((r) => DiaryEntry(id: r.id, date: r.date, title: r.title, content: r.content, checkInRecordId: r.checkInRecordId).toJson()).toList(),
         'reminders': reminders.map((r) => Reminder(id: r.id, title: r.title, dateTime: r.reminderDateTime, repeatWeekdays: r.repeatWeekdays, repeatEndDate: r.repeatEndDate, categoryId: r.categoryId, isCompleted: r.isCompleted).toJson()).toList(),
       };
@@ -302,7 +302,7 @@ class SettingsPage extends ConsumerWidget {
       for (final r in json['records'] as List) {
         final m = CheckInRecord.fromJson(r as Map<String, dynamic>);
         await db.into(db.checkInRecords).insert(CheckInRecordsCompanion.insert(
-          categoryId: m.categoryId, date: m.date, isCompleted: Value(m.isCompleted), note: Value(m.note),
+          categoryId: m.categoryId, date: m.date, isCompleted: Value(m.isCompleted), note: Value(m.note), completedAt: m.completedAt != null ? Value(m.completedAt!) : const Value.absent(),
         ));
       }
       for (final d in json['diaries'] as List) {

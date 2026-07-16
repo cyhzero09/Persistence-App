@@ -27,6 +27,7 @@ final checkInRecordsForDateProvider = FutureProvider.family<List<CheckInRecord>,
     date: r.date,
     isCompleted: r.isCompleted,
     note: r.note,
+    completedAt: r.completedAt,
   )).toList();
 });
 
@@ -48,5 +49,6 @@ final checkInRecordsForCategoryProvider = FutureProvider.family<List<CheckInReco
     date: r.date,
     isCompleted: r.isCompleted,
     note: r.note,
+    completedAt: r.completedAt,
   )).toList();
 });

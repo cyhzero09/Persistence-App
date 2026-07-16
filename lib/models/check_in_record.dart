@@ -4,6 +4,7 @@ class CheckInRecord {
   final String date;
   final bool isCompleted;
   final String? note;
+  final String? completedAt;
 
   const CheckInRecord({
     required this.id,
@@ -11,6 +12,7 @@ class CheckInRecord {
     required this.date,
     this.isCompleted = false,
     this.note,
+    this.completedAt,
   });
 
   Map<String, dynamic> toJson() => {
@@ -19,6 +21,7 @@ class CheckInRecord {
     'date': date,
     'isCompleted': isCompleted,
     'note': note,
+    'completedAt': completedAt,
   };
 
   factory CheckInRecord.fromJson(Map<String, dynamic> json) => CheckInRecord(
@@ -27,5 +30,6 @@ class CheckInRecord {
     date: json['date'] as String,
     isCompleted: json['isCompleted'] as bool? ?? false,
     note: json['note'] as String?,
+    completedAt: json['completedAt'] as String?,
   );
 }

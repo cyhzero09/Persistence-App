@@ -15,6 +15,7 @@ class CheckInRecords extends Table {
   TextColumn get date => text()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   TextColumn get note => text().nullable()();
+  TextColumn get completedAt => text().nullable()();
 }
 
 class DiaryEntries extends Table {

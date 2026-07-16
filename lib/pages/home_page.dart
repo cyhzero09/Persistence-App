@@ -136,8 +136,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
               final existing = record.isNotEmpty ? record.first : null;
               return CheckInTile(
                 category: cat,
-                isCompleted: existing?.isCompleted ?? false,
-                note: existing?.note,
+                record: existing,
                 onToggle: (value) => _toggleCheckIn(cat.id, dateStr, value ?? false, existing),
                 onAddNote: () => _showNoteDialog(cat.id, dateStr, existing),
               );
@@ -214,12 +213,16 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     if (completed) {
       if (existing != null) {
         await (db.update(db.checkInRecords)
-          ..where((t) => t.id.equals(existing.id))).write(CheckInRecordsCompanion(isCompleted: Value(true)));
+          ..where((t) => t.id.equals(existing.id))).write(CheckInRecordsCompanion(
+            isCompleted: Value(true),
+            completedAt: Value(DateTime.now().toIso8601String()),
+          ));
       } else {
         await db.into(db.checkInRecords).insert(CheckInRecordsCompanion.insert(
           categoryId: categoryId,
           date: dateStr,
           isCompleted: Value(true),
+          completedAt: Value(DateTime.now().toIso8601String()),
         ));
       }
     } else {
@@ -235,26 +238,18 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     final note = await showDialog<String>(context: context, builder: (_) => CheckInNoteDialog(initialNote: existing?.note));
     if (note != null) {
       final db = ref.read(databaseProvider);
-      int? recordId;
       if (existing != null) {
         await (db.update(db.checkInRecords)
           ..where((t) => t.id.equals(existing.id))).write(CheckInRecordsCompanion(note: Value(note)));
-        recordId = existing.id;
       } else {
-        recordId = await db.into(db.checkInRecords).insert(CheckInRecordsCompanion.insert(
+        await db.into(db.checkInRecords).insert(CheckInRecordsCompanion.insert(
           categoryId: categoryId,
           date: dateStr,
           note: Value(note),
         ));
       }
-      await db.into(db.diaryEntries).insert(DiaryEntriesCompanion.insert(
-        date: '$dateStr ${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}:00',
-        content: note,
-        checkInRecordId: Value(recordId),
-      ));
       ref.invalidate(checkInRecordsForDateProvider(dateStr));
       ref.invalidate(checkInRecordDatesProvider);
-      ref.invalidate(diaryEntriesProvider);
     }
   }
 }
