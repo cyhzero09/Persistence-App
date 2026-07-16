@@ -247,37 +247,116 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
 
   Widget _buildCalendar(List<String> dates) {
     final markedDates = _parseMarkedDates(dates);
-    return TableCalendar(
-      firstDay: DateTime(2024),
-      lastDay: DateTime.now().add(const Duration(days: 365)),
-      focusedDay: _selectedDate,
-      selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-      onDaySelected: (selectedDay, focusedDay) => setState(() => _selectedDate = selectedDay),
-      calendarFormat: _expanded ? CalendarFormat.month : CalendarFormat.week,
-      availableCalendarFormats: const {
-        CalendarFormat.month: '',
-        CalendarFormat.week: '',
-      },
-      calendarStyle: CalendarStyle(
-        todayDecoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          shape: BoxShape.circle,
+    if (_expanded) {
+      return TableCalendar(
+        firstDay: DateTime(2024),
+        lastDay: DateTime.now().add(const Duration(days: 365)),
+        focusedDay: _selectedDate,
+        selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
+        onDaySelected: (selectedDay, focusedDay) => setState(() => _selectedDate = selectedDay),
+        calendarStyle: CalendarStyle(
+          todayDecoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            shape: BoxShape.circle,
+          ),
+          selectedDecoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
+            shape: BoxShape.circle,
+          ),
+          markerDecoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.secondary,
+            shape: BoxShape.circle,
+          ),
         ),
-        selectedDecoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary,
-          shape: BoxShape.circle,
+        eventLoader: (day) {
+          final dateOnly = DateTime(day.year, day.month, day.day);
+          return markedDates.contains(dateOnly) ? [true] : [];
+        },
+        locale: 'zh-TW',
+        headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+      );
+    }
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final sunday = _sundayOf(today);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            children: List.generate(7, (i) => Expanded(
+              child: Center(
+                child: Text(['日','一','二','三','四','五','六'][i],
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+              ),
+            )),
+          ),
         ),
-        markerDecoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.secondary,
-          shape: BoxShape.circle,
-        ),
+        _buildWeekRow(sunday.subtract(const Duration(days: 7)), todayDate, markedDates),
+        const SizedBox(height: 2),
+        _buildWeekRow(sunday, todayDate, markedDates),
+        const SizedBox(height: 2),
+        _buildWeekRow(sunday.add(const Duration(days: 7)), todayDate, markedDates),
+      ],
+    );
+  }
+
+  DateTime _sundayOf(DateTime date) {
+    final d = DateTime(date.year, date.month, date.day);
+    return d.subtract(Duration(days: d.weekday % 7));
+  }
+
+  Widget _buildWeekRow(DateTime weekStart, DateTime todayDate, Set<DateTime> markedDates) {
+    final days = List.generate(7, (i) => weekStart.add(Duration(days: i)));
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: days.map((day) {
+          final dayDate = DateTime(day.year, day.month, day.day);
+          final isSelected = dayDate == DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+          final isToday = dayDate == todayDate;
+          final hasMark = markedDates.contains(dayDate);
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedDate = day),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected ? Theme.of(context).colorScheme.primary : null,
+                  shape: BoxShape.circle,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${day.day}',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? Theme.of(context).colorScheme.onPrimary : null,
+                      ),
+                    ),
+                    if (hasMark)
+                      Container(
+                        width: 5,
+                        height: 5,
+                        margin: const EdgeInsets.only(top: 2),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.secondary,
+                          shape: BoxShape.circle,
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 7),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
-      eventLoader: (day) {
-        final dateOnly = DateTime(day.year, day.month, day.day);
-        return markedDates.contains(dateOnly) ? [true] : [];
-      },
-      locale: 'zh-TW',
-      headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
     );
   }
 
