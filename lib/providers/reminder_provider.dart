@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/database.dart' hide Reminder;
 import '../models/reminder.dart';
+import '../notification_service.dart';
 import 'database_provider.dart';
 
 final remindersProvider = FutureProvider<List<Reminder>>((ref) async {
@@ -34,7 +35,18 @@ class ReminderNotifier {
 
   Future<void> addReminder(RemindersCompanion companion) async {
     final db = _ref.read(databaseProvider);
-    await db.into(db.reminders).insert(companion);
+    final id = await db.into(db.reminders).insert(companion);
+    final reminderDateTime = companion.reminderDateTime.value;
+    final title = companion.title.value;
+    final dt = DateTime.parse(reminderDateTime);
+    if (dt.isAfter(DateTime.now())) {
+      await NotificationService().scheduleReminder(
+        id: id,
+        title: title,
+        body: '提醒：$title',
+        scheduledDate: dt,
+      );
+    }
     _ref.invalidate(remindersProvider);
   }
 
@@ -42,12 +54,16 @@ class ReminderNotifier {
     final db = _ref.read(databaseProvider);
     await (db.update(db.reminders)
       ..where((t) => t.id.equals(id))).write(RemindersCompanion(isCompleted: Value(completed)));
+    if (completed) {
+      await NotificationService().cancelReminder(id);
+    }
     _ref.invalidate(remindersProvider);
   }
 
   Future<void> deleteReminder(int id) async {
     final db = _ref.read(databaseProvider);
     await (db.delete(db.reminders)..where((t) => t.id.equals(id))).go();
+    await NotificationService().cancelReminder(id);
     _ref.invalidate(remindersProvider);
   }
 }

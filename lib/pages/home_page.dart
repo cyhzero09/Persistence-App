@@ -2,7 +2,6 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:table_calendar/table_calendar.dart';
 import '../database/database.dart' hide CheckInCategory, CheckInRecord, DiaryEntry, Reminder;
 import '../providers/database_provider.dart';
 import '../providers/check_in_provider.dart';
@@ -34,6 +33,9 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     super.initState();
     _selectedDate = DateTime.now();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging && mounted) setState(() {});
+    });
   }
 
   @override
@@ -197,40 +199,12 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (_expanded)
-          TableCalendar(
-            firstDay: DateTime(2024),
-            lastDay: DateTime.now().add(const Duration(days: 365)),
-            focusedDay: _selectedDate,
-            selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-            onDaySelected: (selectedDay, focusedDay) => setState(() => _selectedDate = selectedDay),
-            calendarStyle: CalendarStyle(
-              todayDecoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                shape: BoxShape.circle,
-              ),
-              selectedDecoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                shape: BoxShape.circle,
-              ),
-              markerDecoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.secondary,
-                shape: BoxShape.circle,
-              ),
-            ),
-            eventLoader: (day) {
-              final dateOnly = DateTime(day.year, day.month, day.day);
-              return markedDates.contains(dateOnly) ? [true] : [];
-            },
-            locale: 'zh-TW',
-            headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
-          )
-        else
-          WeekCalendar(
-            selectedDate: _selectedDate,
-            markedDates: markedDates,
-            onDateSelected: (day) => setState(() => _selectedDate = day),
-          ),
+        WeekCalendar(
+          selectedDate: _selectedDate,
+          markedDates: markedDates,
+          onDateSelected: (day) => setState(() => _selectedDate = day),
+          showFullMonth: _expanded,
+        ),
       ],
     );
   }
