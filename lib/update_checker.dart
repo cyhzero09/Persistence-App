@@ -1,7 +1,8 @@
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 const String _githubRepo = 'cyhzero09/Persistence-App';
-const String _versionUrl = 'https://raw.githubusercontent.com/$_githubRepo/main/version.txt';
+const String _apiUrl = 'https://api.github.com/repos/$_githubRepo/releases/latest';
 
 class UpdateCheckResult {
   final bool hasUpdate;
@@ -13,14 +14,19 @@ class UpdateCheckResult {
 
 Future<UpdateCheckResult> checkForUpdates(String currentVersion) async {
   try {
-    final response = await http.get(Uri.parse(_versionUrl)).timeout(const Duration(seconds: 10));
+    final response = await http.get(
+      Uri.parse(_apiUrl),
+      headers: {'User-Agent': 'Persistence-App'},
+    ).timeout(const Duration(seconds: 10));
     if (response.statusCode != 200) {
-      return const UpdateCheckResult(hasUpdate: false, error: '無法獲取版本資訊');
+      return UpdateCheckResult(hasUpdate: false, error: '無法獲取版本資訊 (${response.statusCode})');
     }
-    final latestVersion = response.body.trim();
-    if (latestVersion.isEmpty) {
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final tagName = data['tag_name'] as String?;
+    if (tagName == null || tagName.isEmpty) {
       return const UpdateCheckResult(hasUpdate: false, error: '版本資訊為空');
     }
+    final latestVersion = tagName.startsWith('v') ? tagName.substring(1) : tagName;
     final hasUpdate = _compareVersions(latestVersion, currentVersion) > 0;
     return UpdateCheckResult(hasUpdate: hasUpdate, latestVersion: latestVersion);
   } catch (e) {
