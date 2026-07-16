@@ -7,6 +7,9 @@ class CheckInTile extends StatelessWidget {
   final CheckInRecord? record;
   final ValueChanged<bool?> onToggle;
   final VoidCallback onAddNote;
+  final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const CheckInTile({
     super.key,
@@ -14,6 +17,9 @@ class CheckInTile extends StatelessWidget {
     this.record,
     required this.onToggle,
     required this.onAddNote,
+    this.onTap,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -30,16 +36,25 @@ class CheckInTile extends StatelessWidget {
     if (category.startTime != null) subtitleParts.add('⏰ ${category.startTime}');
     if (record?.note != null) subtitleParts.add(record!.note!);
     final completed = record?.isCompleted ?? false;
-    return CheckboxListTile(
+    return ListTile(
+      leading: Checkbox(value: completed, onChanged: onToggle),
       title: Text('${category.emoji} ${category.name}'),
       subtitle: subtitleParts.isNotEmpty
           ? Text(subtitleParts.join(' | '), style: const TextStyle(fontSize: 13))
           : null,
-      value: completed,
-      onChanged: onToggle,
-      secondary: IconButton(icon: Icon(Icons.edit_note, size: 20,
-        color: (record?.note != null) ? Theme.of(context).colorScheme.primary : null,
-      ), onPressed: onAddNote),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(icon: Icon(Icons.edit_note, size: 20,
+            color: (record?.note != null) ? Theme.of(context).colorScheme.primary : null,
+          ), onPressed: onAddNote),
+          if (onEdit != null)
+            IconButton(icon: const Icon(Icons.edit_outlined, size: 18), onPressed: onEdit),
+          if (onDelete != null)
+            IconButton(icon: const Icon(Icons.delete_outline, size: 18), onPressed: onDelete),
+        ],
+      ),
+      onTap: onTap,
     );
   }
 }

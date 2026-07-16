@@ -8,14 +8,22 @@ import '../providers/database_provider.dart';
 import '../providers/check_in_provider.dart';
 import '../widgets/check_in_dialog.dart';
 import '../widgets/check_in_tile.dart';
-import '../widgets/week_calendar.dart';
 import '../widgets/add_entry_sheet.dart';
 import '../providers/diary_provider.dart';
 import '../providers/reminder_provider.dart';
+import '../notification_service.dart';
 import '../models/check_in_category.dart';
 import '../models/check_in_record.dart';
 import '../models/diary_entry.dart';
 import '../models/reminder.dart';
+import 'diary_detail_page.dart';
+import 'diary_edit_page.dart';
+import 'category_detail_page.dart';
+
+const _emojis = [
+  '🏃','📚','💧','🧘','💪','🎵','✍','🍎','☕','🎮','📝','🛌','🎯','🌈',
+  '💻','📱','🎨','🎬','🎧','🏋','🚴','🏊','🥗','🧠','💊','🧹','🎁','💡',
+];
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -110,10 +118,11 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            builder: (_) => AddEntrySheet(selectedDate: _selectedDate, initialTab: _tabController.index),
-          );
+          switch (_tabController.index) {
+            case 0: _showAddCategoryDialog();
+            case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const DiaryEditPage()));
+            case 2: showModalBottomSheet(context: context, builder: (_) => AddEntrySheet(selectedDate: _selectedDate, initialTab: 2));
+          }
         },
         child: const Icon(Icons.add),
       ),
@@ -140,6 +149,11 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 record: existing,
                 onToggle: (value) => _toggleCheckIn(cat.id, dateStr, value ?? false, existing),
                 onAddNote: () => _showNoteDialog(cat.id, dateStr, existing),
+                onTap: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => CategoryDetailPage(category: cat),
+                )),
+                onEdit: () => _showEditCategoryDialog(cat),
+                onDelete: () => _deleteCategory(cat.id),
               );
             }).toList(),
           );
@@ -158,10 +172,30 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
         final dayEntries = entries.where((e) => e.date.startsWith(dateStr)).toList();
         if (dayEntries.isEmpty) return const Center(child: Text('此日無日記'));
         return ListView(
-          children: dayEntries.map((e) => ListTile(
-            title: Text(e.title ?? e.content.split('\n').first, maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text(e.content.split('\n').first, maxLines: 1, overflow: TextOverflow.ellipsis),
-          )).toList(),
+          children: dayEntries.map((e) {
+            final dt = DateTime.parse(e.date);
+            return ListTile(
+              title: Text(e.title ?? e.content.split('\n').first, maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text('${DateFormat('HH:mm', 'zh-TW').format(dt)}  ${e.content.split('\n').first}',
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    onPressed: () => _editDiary(e),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    onPressed: () => _deleteDiary(e.id),
+                  ),
+                ],
+              ),
+              onTap: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) => DiaryDetailPage(entry: e),
+              )),
+            );
+          }).toList(),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -181,10 +215,27 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
           children: dayReminders.map((r) {
             final dt = DateTime.parse(r.dateTime);
             return ListTile(
-              leading: Icon(r.isCompleted ? Icons.check_circle : Icons.notifications_outlined,
-                color: r.isCompleted ? Colors.green : null),
-              title: Text(r.title),
+              leading: Checkbox(
+                value: r.isCompleted,
+                onChanged: (v) => _toggleReminder(r.id, v ?? false),
+              ),
+              title: Text(r.title, style: TextStyle(
+                decoration: r.isCompleted ? TextDecoration.lineThrough : null,
+              )),
               subtitle: Text(DateFormat('HH:mm', 'zh-TW').format(dt)),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    onPressed: () => _editReminder(context, r),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    onPressed: () => _deleteReminder(r.id),
+                  ),
+                ],
+              ),
             );
           }).toList(),
         );
@@ -196,45 +247,37 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
 
   Widget _buildCalendar(List<String> dates) {
     final markedDates = _parseMarkedDates(dates);
-    if (_expanded) {
-      return TableCalendar(
-        firstDay: DateTime(2024),
-        lastDay: DateTime.now().add(const Duration(days: 365)),
-        focusedDay: _selectedDate,
-        selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-        onDaySelected: (selectedDay, focusedDay) => setState(() => _selectedDate = selectedDay),
-        calendarStyle: CalendarStyle(
-          todayDecoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            shape: BoxShape.circle,
-          ),
-          selectedDecoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary,
-            shape: BoxShape.circle,
-          ),
-          markerDecoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.secondary,
-            shape: BoxShape.circle,
-          ),
+    return TableCalendar(
+      firstDay: DateTime(2024),
+      lastDay: DateTime.now().add(const Duration(days: 365)),
+      focusedDay: _selectedDate,
+      selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
+      onDaySelected: (selectedDay, focusedDay) => setState(() => _selectedDate = selectedDay),
+      calendarFormat: _expanded ? CalendarFormat.month : CalendarFormat.week,
+      availableCalendarFormats: const {
+        CalendarFormat.month: '',
+        CalendarFormat.week: '',
+      },
+      calendarStyle: CalendarStyle(
+        todayDecoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primaryContainer,
+          shape: BoxShape.circle,
         ),
-        eventLoader: (day) {
-          final dateOnly = DateTime(day.year, day.month, day.day);
-          return markedDates.contains(dateOnly) ? [true] : [];
-        },
-        locale: 'zh-TW',
-        headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
-      );
-    }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        WeekCalendar(
-          selectedDate: _selectedDate,
-          markedDates: markedDates,
-          onDateSelected: (day) => setState(() => _selectedDate = day),
-          showFullMonth: false,
+        selectedDecoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary,
+          shape: BoxShape.circle,
         ),
-      ],
+        markerDecoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.secondary,
+          shape: BoxShape.circle,
+        ),
+      ),
+      eventLoader: (day) {
+        final dateOnly = DateTime(day.year, day.month, day.day);
+        return markedDates.contains(dateOnly) ? [true] : [];
+      },
+      locale: 'zh-TW',
+      headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
     );
   }
 
@@ -286,5 +329,565 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       ref.invalidate(checkInRecordsForDateProvider(dateStr));
       ref.invalidate(checkInRecordDatesProvider);
     }
+  }
+
+  Future<void> _deleteCategory(int id) async {
+    final db = ref.read(databaseProvider);
+    await (db.delete(db.checkInRecords)..where((t) => t.categoryId.equals(id))).go();
+    await (db.delete(db.checkInCategories)..where((t) => t.id.equals(id))).go();
+    ref.invalidate(categoriesProvider);
+    ref.invalidate(checkInRecordDatesProvider);
+  }
+
+  void _showAddCategoryDialog() {
+    final nameController = TextEditingController();
+    final descController = TextEditingController();
+    String emoji = '📌';
+    TimeOfDay? startTime;
+    bool addReminder = false;
+    DateTime reminderStart = _selectedDate;
+    TimeOfDay? reminderTime;
+    final selectedWeekdays = <int>{};
+    DateTime? reminderEndDate;
+
+    bool emojiExpanded = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('新增打卡項目'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: '名稱', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(labelText: '簡介（可選）', border: OutlineInputBorder(), hintText: '例如：每天跑30分鐘'),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(startTime != null ? '⏰ ${startTime!.format(context)}' : '⏰ 設置開始時間（可選）'),
+                  trailing: startTime != null
+                      ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setDialogState(() => startTime = null))
+                      : null,
+                  onTap: () async {
+                    final t = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+                    if (t != null) setDialogState(() => startTime = t);
+                  },
+                ),
+                const SizedBox(height: 12),
+                Text('選擇圖示：$emoji', style: const TextStyle(fontSize: 18)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    ..._emojis.take(emojiExpanded ? _emojis.length : 8).map((e) => GestureDetector(
+                      onTap: () => setDialogState(() => emoji = e),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: emoji == e ? Theme.of(context).colorScheme.primaryContainer : null,
+                          border: Border.all(color: emoji == e ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outline),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(e, style: const TextStyle(fontSize: 24)),
+                      ),
+                    )),
+                    if (!emojiExpanded)
+                      GestureDetector(
+                        onTap: () => setDialogState(() => emojiExpanded = true),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Theme.of(context).colorScheme.outline),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text('+${_emojis.length - 8}', style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.primary)),
+                        ),
+                      )
+                    else
+                      GestureDetector(
+                        onTap: () => setDialogState(() => emojiExpanded = false),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Theme.of(context).colorScheme.outline),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(Icons.unfold_less, size: 20, color: Theme.of(context).colorScheme.primary),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Text('新增提醒'),
+                    Switch(
+                      value: addReminder,
+                      onChanged: (v) => setDialogState(() => addReminder = v),
+                    ),
+                  ],
+                ),
+                if (addReminder) ...[
+                  const SizedBox(height: 8),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('開始：${DateFormat('yyyy/M/d', 'zh-TW').format(reminderStart)}'),
+                    leading: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final dt = await showDatePicker(
+                        context: context,
+                        initialDate: reminderStart,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 3650)),
+                      );
+                      if (dt != null) setDialogState(() => reminderStart = dt);
+                    },
+                  ),
+                  Row(
+                    children: [
+                      const Text('設定時間'),
+                      Switch(
+                        value: reminderTime != null,
+                        onChanged: (v) => setDialogState(() {
+                          reminderTime = v ? TimeOfDay.now() : null;
+                        }),
+                      ),
+                    ],
+                  ),
+                  if (reminderTime != null)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('⏰ ${reminderTime!.format(context)}'),
+                      leading: const Icon(Icons.access_time),
+                      onTap: () async {
+                        final tm = await showTimePicker(context: context, initialTime: reminderTime!);
+                        if (tm != null) setDialogState(() => reminderTime = tm);
+                      },
+                    ),
+                  const SizedBox(height: 4),
+                  const Text('重複：', style: TextStyle(fontSize: 13)),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 4,
+                    children: List.generate(7, (i) => FilterChip(
+                      label: Text(['一','二','三','四','五','六','日'][i]),
+                      selected: selectedWeekdays.contains(i),
+                      onSelected: (v) {
+                        setDialogState(() {
+                          if (v) { selectedWeekdays.add(i); } else { selectedWeekdays.remove(i); }
+                        });
+                      },
+                    )),
+                  ),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(reminderEndDate != null
+                        ? '結束：${DateFormat('yyyy/M/d', 'zh-TW').format(reminderEndDate!)}'
+                        : '結束日期（可選）'),
+                    trailing: reminderEndDate != null
+                        ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setDialogState(() => reminderEndDate = null))
+                        : null,
+                    leading: const Icon(Icons.event),
+                    onTap: () async {
+                      final dt = await showDatePicker(
+                        context: context,
+                        initialDate: reminderEndDate ?? reminderStart.add(const Duration(days: 30)),
+                        firstDate: reminderStart,
+                        lastDate: DateTime.now().add(const Duration(days: 3650)),
+                      );
+                      if (dt != null) setDialogState(() => reminderEndDate = dt);
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            FilledButton(
+              onPressed: nameController.text.trim().isEmpty ? null : () async {
+                final db = ref.read(databaseProvider);
+                final catId = await db.into(db.checkInCategories).insert(CheckInCategoriesCompanion.insert(
+                  name: nameController.text.trim(),
+                  emoji: emoji,
+                  description: descController.text.trim().isNotEmpty ? Value(descController.text.trim()) : const Value.absent(),
+                  startTime: startTime != null ? Value('${startTime!.hour.toString().padLeft(2, '0')}:${startTime!.minute.toString().padLeft(2, '0')}') : const Value.absent(),
+                ));
+                if (addReminder) {
+                  final weekdaysStr = selectedWeekdays.isNotEmpty ? selectedWeekdays.join(',') : null;
+                  final reminderDt = reminderTime != null
+                      ? DateTime(reminderStart.year, reminderStart.month, reminderStart.day, reminderTime!.hour, reminderTime!.minute)
+                      : reminderStart;
+                  final id = await db.into(db.reminders).insert(RemindersCompanion.insert(
+                    title: nameController.text.trim(),
+                    reminderDateTime: reminderDt.toIso8601String(),
+                    repeatWeekdays: weekdaysStr != null ? Value(weekdaysStr) : const Value.absent(),
+                    repeatEndDate: reminderEndDate != null ? Value(DateFormat('yyyy-MM-dd').format(reminderEndDate!)) : const Value.absent(),
+                    categoryId: Value(catId),
+                  ));
+                  if (reminderDt.isAfter(DateTime.now())) {
+                    await NotificationService().scheduleReminder(
+                      id: id,
+                      title: nameController.text.trim(),
+                      body: '提醒：${nameController.text.trim()}',
+                      scheduledDate: reminderDt,
+                    );
+                  }
+                }
+                ref.invalidate(categoriesProvider);
+                ref.invalidate(remindersProvider);
+                if (!ctx.mounted) return;
+                Navigator.pop(ctx);
+              },
+              child: const Text('新增'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditCategoryDialog(CheckInCategory category) {
+    final nameController = TextEditingController(text: category.name);
+    final descController = TextEditingController(text: category.description ?? '');
+    String emoji = category.emoji;
+    TimeOfDay? startTime = category.startTime != null
+        ? TimeOfDay(
+            hour: int.parse(category.startTime!.split(':')[0]),
+            minute: int.parse(category.startTime!.split(':')[1]),
+          )
+        : null;
+    bool emojiExpanded = false;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('編輯打卡項目'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: '名稱', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(labelText: '簡介（可選）', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(startTime != null ? '⏰ ${startTime!.format(context)}' : '⏰ 設置開始時間（可選）'),
+                  trailing: startTime != null
+                      ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setDialogState(() => startTime = null))
+                      : null,
+                  onTap: () async {
+                    final t = await showTimePicker(context: context, initialTime: startTime ?? TimeOfDay.now());
+                    if (t != null) setDialogState(() => startTime = t);
+                  },
+                ),
+                const SizedBox(height: 12),
+                Text('選擇圖示：$emoji', style: const TextStyle(fontSize: 18)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    ..._emojis.take(emojiExpanded ? _emojis.length : 8).map((e) => GestureDetector(
+                      onTap: () => setDialogState(() => emoji = e),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: emoji == e ? Theme.of(context).colorScheme.primaryContainer : null,
+                          border: Border.all(color: emoji == e ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outline),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(e, style: const TextStyle(fontSize: 24)),
+                      ),
+                    )),
+                    if (!emojiExpanded)
+                      GestureDetector(
+                        onTap: () => setDialogState(() => emojiExpanded = true),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Theme.of(context).colorScheme.outline),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text('+${_emojis.length - 8}', style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.primary)),
+                        ),
+                      )
+                    else
+                      GestureDetector(
+                        onTap: () => setDialogState(() => emojiExpanded = false),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Theme.of(context).colorScheme.outline),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(Icons.unfold_less, size: 20, color: Theme.of(context).colorScheme.primary),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            FilledButton(
+              onPressed: nameController.text.trim().isEmpty ? null : () async {
+                final db = ref.read(databaseProvider);
+                await (db.update(db.checkInCategories)
+                  ..where((t) => t.id.equals(category.id)))
+                  .write(CheckInCategoriesCompanion(
+                    name: Value(nameController.text.trim()),
+                    emoji: Value(emoji),
+                    description: descController.text.trim().isNotEmpty ? Value(descController.text.trim()) : const Value.absent(),
+                    startTime: startTime != null ? Value('${startTime!.hour.toString().padLeft(2, '0')}:${startTime!.minute.toString().padLeft(2, '0')}') : const Value.absent(),
+                  ));
+                ref.invalidate(categoriesProvider);
+                if (!ctx.mounted) return;
+                Navigator.pop(ctx);
+              },
+              child: const Text('儲存'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _editDiary(DiaryEntry entry) {
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => DiaryEditPage(entry: entry),
+    ));
+  }
+
+  Future<void> _deleteDiary(int id) async {
+    final db = ref.read(databaseProvider);
+    await (db.delete(db.diaryEntries)..where((t) => t.id.equals(id))).go();
+    ref.invalidate(diaryEntriesProvider);
+  }
+
+  Future<void> _toggleReminder(int id, bool completed) async {
+    final db = ref.read(databaseProvider);
+    await (db.update(db.reminders)..where((t) => t.id.equals(id))).write(RemindersCompanion(
+      isCompleted: Value(completed),
+    ));
+    if (completed) {
+      await NotificationService().cancelReminder(id);
+    }
+    ref.invalidate(remindersProvider);
+  }
+
+  void _editReminder(BuildContext context, Reminder reminder) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => _EditReminderSheet(reminder: reminder),
+    );
+  }
+
+  Future<void> _deleteReminder(int id) async {
+    final db = ref.read(databaseProvider);
+    await (db.delete(db.reminders)..where((t) => t.id.equals(id))).go();
+    await NotificationService().cancelReminder(id);
+    ref.invalidate(remindersProvider);
+  }
+}
+
+class _EditReminderSheet extends ConsumerStatefulWidget {
+  final Reminder reminder;
+  const _EditReminderSheet({required this.reminder});
+
+  @override
+  ConsumerState<_EditReminderSheet> createState() => _EditReminderSheetState();
+}
+
+class _EditReminderSheetState extends ConsumerState<_EditReminderSheet> {
+  final _titleController = TextEditingController();
+  late DateTime _reminderDate;
+  TimeOfDay? _reminderTime;
+  bool _isMultiDay = false;
+  final _selectedWeekdays = <int>{};
+  DateTime? _reminderEndDate;
+
+  static const _weekdayLabels = ['一', '二', '三', '四', '五', '六', '日'];
+
+  @override
+  void initState() {
+    super.initState();
+    final edit = widget.reminder;
+    _titleController.text = edit.title;
+    final dt = DateTime.parse(edit.dateTime);
+    _reminderDate = dt;
+    _reminderTime = TimeOfDay.fromDateTime(dt);
+    if (edit.repeatWeekdays != null) {
+      _selectedWeekdays.addAll(edit.repeatWeekdays!.split(',').map(int.parse));
+      _isMultiDay = _selectedWeekdays.isNotEmpty;
+    }
+    if (edit.repeatEndDate != null) {
+      _reminderEndDate = DateTime.parse(edit.repeatEndDate!);
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 16, right: 16, top: 16,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('編輯提醒',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _titleController,
+            decoration: const InputDecoration(labelText: '標題', border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(value: false, label: Text('單天')),
+              ButtonSegment(value: true, label: Text('多天')),
+            ],
+            selected: {_isMultiDay},
+            onSelectionChanged: (v) => setState(() => _isMultiDay = v.first),
+          ),
+          const SizedBox(height: 12),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(_isMultiDay
+                ? '開始：${DateFormat('yyyy/M/d', 'zh-TW').format(_reminderDate)}'
+                : DateFormat('yyyy/M/d', 'zh-TW').format(_reminderDate)),
+            leading: const Icon(Icons.calendar_today),
+            onTap: () async {
+              final dt = await showDatePicker(
+                context: context,
+                initialDate: _reminderDate,
+                firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                lastDate: DateTime.now().add(const Duration(days: 365)),
+              );
+              if (dt != null) setState(() => _reminderDate = dt);
+            },
+          ),
+          Row(
+            children: [
+              const Text('設定時間'),
+              Switch(
+                value: _reminderTime != null,
+                onChanged: (v) => setState(() => _reminderTime = v ? TimeOfDay.now() : null),
+              ),
+            ],
+          ),
+          if (_reminderTime != null)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('⏰ ${_reminderTime!.format(context)}'),
+              leading: const Icon(Icons.access_time),
+              onTap: () async {
+                final tm = await showTimePicker(context: context, initialTime: _reminderTime!);
+                if (tm != null) setState(() => _reminderTime = tm);
+              },
+            ),
+          if (_isMultiDay) ...[
+            const SizedBox(height: 8),
+            Text('重複：', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 6,
+              children: List.generate(7, (i) => FilterChip(
+                label: Text(_weekdayLabels[i]),
+                selected: _selectedWeekdays.contains(i),
+                onSelected: (v) {
+                  setState(() {
+                    if (v) { _selectedWeekdays.add(i); } else { _selectedWeekdays.remove(i); }
+                  });
+                },
+              )),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(_reminderEndDate != null
+                  ? '結束：${DateFormat('yyyy/M/d', 'zh-TW').format(_reminderEndDate!)}'
+                  : '結束日期（可選）'),
+              trailing: _reminderEndDate != null
+                  ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _reminderEndDate = null))
+                  : null,
+              leading: const Icon(Icons.event),
+              onTap: () async {
+                final dt = await showDatePicker(
+                  context: context,
+                  initialDate: _reminderEndDate ?? _reminderDate.add(const Duration(days: 30)),
+                  firstDate: _reminderDate,
+                  lastDate: DateTime.now().add(const Duration(days: 3650)),
+                );
+                if (dt != null) setState(() => _reminderEndDate = dt);
+              },
+            ),
+            const Text('提示：結束留空 = 持續有效', style: TextStyle(fontSize: 12)),
+          ],
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: _titleController.text.trim().isEmpty ? null : () async {
+              final db = ref.read(databaseProvider);
+              final reminderDt = _reminderTime != null
+                  ? DateTime(_reminderDate.year, _reminderDate.month, _reminderDate.day, _reminderTime!.hour, _reminderTime!.minute)
+                  : _reminderDate;
+              final weekdaysStr = _selectedWeekdays.isNotEmpty ? _selectedWeekdays.join(',') : null;
+              final companion = RemindersCompanion(
+                title: Value(_titleController.text.trim()),
+                reminderDateTime: Value(reminderDt.toIso8601String()),
+                repeatWeekdays: weekdaysStr != null ? Value(weekdaysStr) : const Value.absent(),
+                repeatEndDate: _reminderEndDate != null ? Value(DateFormat('yyyy-MM-dd').format(_reminderEndDate!)) : const Value.absent(),
+              );
+              await (db.update(db.reminders)
+                ..where((t) => t.id.equals(widget.reminder.id)))
+                .write(companion);
+              await NotificationService().cancelReminder(widget.reminder.id);
+              if (reminderDt.isAfter(DateTime.now())) {
+                await NotificationService().scheduleReminder(
+                  id: widget.reminder.id,
+                  title: _titleController.text.trim(),
+                  body: '提醒：${_titleController.text.trim()}',
+                  scheduledDate: reminderDt,
+                );
+              }
+              ref.invalidate(remindersProvider);
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('儲存'),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+      ),
+    );
   }
 }
