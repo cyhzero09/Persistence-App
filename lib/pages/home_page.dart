@@ -211,18 +211,19 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
   Future<void> _toggleCheckIn(int categoryId, String dateStr, bool completed, dynamic existing) async {
     final db = ref.read(databaseProvider);
     if (completed) {
+      final now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
       if (existing != null) {
         await (db.update(db.checkInRecords)
           ..where((t) => t.id.equals(existing.id))).write(CheckInRecordsCompanion(
             isCompleted: Value(true),
-            completedAt: Value(DateTime.now().toIso8601String()),
+            completedAt: Value(now),
           ));
       } else {
         await db.into(db.checkInRecords).insert(CheckInRecordsCompanion.insert(
           categoryId: categoryId,
           date: dateStr,
           isCompleted: Value(true),
-          completedAt: Value(DateTime.now().toIso8601String()),
+          completedAt: Value(now),
         ));
       }
     } else {
@@ -246,6 +247,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
           categoryId: categoryId,
           date: dateStr,
           note: Value(note),
+          completedAt: Value(DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now())),
         ));
       }
       ref.invalidate(checkInRecordsForDateProvider(dateStr));

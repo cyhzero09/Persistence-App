@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../models/check_in_category.dart';
 import '../models/check_in_record.dart';
 
@@ -21,8 +20,12 @@ class CheckInTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final subtitleParts = <String>[];
     if (record?.completedAt != null) {
-      final dt = DateTime.parse(record!.completedAt!);
-      subtitleParts.add(DateFormat('HH:mm', 'zh-TW').format(dt));
+      final parts = record!.completedAt!.split(' ');
+      if (parts.length >= 2) {
+        subtitleParts.add(parts[1].substring(0, 5));
+      } else if (parts[0].contains('T')) {
+        subtitleParts.add(parts[0].split('T')[1].substring(0, 5));
+      }
     }
     if (category.startTime != null) subtitleParts.add('⏰ ${category.startTime}');
     if (record?.note != null) subtitleParts.add(record!.note!);
@@ -34,9 +37,9 @@ class CheckInTile extends StatelessWidget {
           : null,
       value: completed,
       onChanged: onToggle,
-      secondary: record?.note == null
-          ? IconButton(icon: const Icon(Icons.edit_note, size: 20), onPressed: onAddNote)
-          : null,
+      secondary: IconButton(icon: Icon(Icons.edit_note, size: 20,
+        color: (record?.note != null) ? Theme.of(context).colorScheme.primary : null,
+      ), onPressed: onAddNote),
     );
   }
 }
