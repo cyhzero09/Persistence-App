@@ -33,7 +33,8 @@ final checkInRecordsForDateProvider = FutureProvider.family<List<CheckInRecord>,
 
 final checkInRecordDatesProvider = FutureProvider<List<String>>((ref) async {
   final db = ref.read(databaseProvider);
-  final rows = await db.select(db.checkInRecords).get();
+  final rows = await (db.select(db.checkInRecords)
+    ..where((t) => t.isCompleted.equals(true))).get();
   final dates = rows.map((r) => r.date).toSet().toList()..sort();
   return dates;
 });

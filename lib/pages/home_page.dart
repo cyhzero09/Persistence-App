@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../database/database.dart' hide CheckInCategory, CheckInRecord, DiaryEntry, Reminder;
 import '../providers/database_provider.dart';
 import '../providers/check_in_provider.dart';
@@ -195,6 +196,35 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
 
   Widget _buildCalendar(List<String> dates) {
     final markedDates = _parseMarkedDates(dates);
+    if (_expanded) {
+      return TableCalendar(
+        firstDay: DateTime(2024),
+        lastDay: DateTime.now().add(const Duration(days: 365)),
+        focusedDay: _selectedDate,
+        selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
+        onDaySelected: (selectedDay, focusedDay) => setState(() => _selectedDate = selectedDay),
+        calendarStyle: CalendarStyle(
+          todayDecoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            shape: BoxShape.circle,
+          ),
+          selectedDecoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
+            shape: BoxShape.circle,
+          ),
+          markerDecoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.secondary,
+            shape: BoxShape.circle,
+          ),
+        ),
+        eventLoader: (day) {
+          final dateOnly = DateTime(day.year, day.month, day.day);
+          return markedDates.contains(dateOnly) ? [true] : [];
+        },
+        locale: 'zh-TW',
+        headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+      );
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -202,7 +232,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
           selectedDate: _selectedDate,
           markedDates: markedDates,
           onDateSelected: (day) => setState(() => _selectedDate = day),
-          showFullMonth: _expanded,
+          showFullMonth: false,
         ),
       ],
     );
@@ -228,7 +258,10 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       }
     } else {
       if (existing != null) {
-        await (db.delete(db.checkInRecords)..where((t) => t.id.equals(existing.id))).go();
+        await (db.update(db.checkInRecords)
+          ..where((t) => t.id.equals(existing.id))).write(CheckInRecordsCompanion(
+            isCompleted: Value(false),
+          ));
       }
     }
     ref.invalidate(checkInRecordsForDateProvider(dateStr));

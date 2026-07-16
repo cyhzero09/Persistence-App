@@ -174,22 +174,27 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: dayRecords.map((r) {
-          DateTime? time;
-          try {
-            time = DateTime.parse(r.date);
-          } catch (_) {}
+          String? timeStr;
+          if (r.completedAt != null) {
+            final parts = r.completedAt!.split(' ');
+            if (parts.length >= 2) {
+              timeStr = parts[1].substring(0, 5);
+            }
+          } else if (r.isCompleted) {
+            timeStr = '00:00';
+          }
           return Card(
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (time != null)
+                  if (timeStr != null)
                     Row(
                       children: [
                         Icon(Icons.access_time, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         const SizedBox(width: 4),
-                        Text(DateFormat('HH:mm', 'zh-TW').format(time),
+                        Text(timeStr,
                           style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                       ],
                     ),
@@ -197,7 +202,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                     const SizedBox(height: 8),
                     Text('備註：${r.note}'),
                   ],
-                  if ((r.note == null || r.note!.isEmpty) && time == null)
+                  if (timeStr == null && (r.note == null || r.note!.isEmpty))
                     const Text('已打卡'),
                 ],
               ),
