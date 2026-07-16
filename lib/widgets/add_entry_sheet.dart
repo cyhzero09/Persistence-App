@@ -10,8 +10,9 @@ import '../providers/database_provider.dart';
 import '../models/check_in_category.dart';
 class AddEntrySheet extends ConsumerStatefulWidget {
   final DateTime selectedDate;
+  final int initialTab;
 
-  const AddEntrySheet({super.key, required this.selectedDate});
+  const AddEntrySheet({super.key, required this.selectedDate, this.initialTab = 0});
 
   @override
   ConsumerState<AddEntrySheet> createState() => _AddEntrySheetState();
@@ -39,7 +40,7 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 3, vsync: this, initialIndex: widget.initialTab);
     _diaryDate = widget.selectedDate;
     _diaryDateController.text = DateFormat('yyyy/M/d', 'zh-TW').format(_diaryDate);
   }

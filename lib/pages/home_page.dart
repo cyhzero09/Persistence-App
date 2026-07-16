@@ -58,13 +58,22 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     final diaryAsync = ref.watch(diaryEntriesProvider);
     final remindersAsync = ref.watch(remindersProvider);
 
+    final diaryDatesAsync = ref.watch(diaryDateStringsProvider);
+    final reminderDatesAsync = ref.watch(reminderDateStringsProvider);
+
+    final activeDatesAsync = switch (_tabController.index) {
+      1 => diaryDatesAsync,
+      2 => reminderDatesAsync,
+      _ => datesAsync,
+    };
+
     return Scaffold(
       appBar: AppBar(
         title: Text(DateFormat('M 月 d 日 EEEE', 'zh-TW').format(_selectedDate)),
       ),
       body: Column(
         children: [
-          datesAsync.when(
+          activeDatesAsync.when(
             data: (dates) => _buildCalendar(dates),
             loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
             error: (e, _) => Center(child: Text('$e')),
@@ -94,7 +103,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
         onPressed: () {
           showModalBottomSheet(
             context: context,
-            builder: (_) => AddEntrySheet(selectedDate: _selectedDate),
+            builder: (_) => AddEntrySheet(selectedDate: _selectedDate, initialTab: _tabController.index),
           );
         },
         child: const Icon(Icons.add),
@@ -184,12 +193,6 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       children: [
         Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.chevron_left),
-              onPressed: () => setState(() {
-                _selectedDate = _selectedDate.subtract(const Duration(days: 7));
-              }),
-            ),
             Expanded(
               child: Text(
                 _expanded
@@ -198,12 +201,6 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.chevron_right),
-              onPressed: () => setState(() {
-                _selectedDate = _selectedDate.add(const Duration(days: 7));
-              }),
             ),
             IconButton(
               icon: Icon(_expanded ? Icons.unfold_less : Icons.unfold_more),
@@ -250,17 +247,22 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
   }
 
   Future<void> _toggleCheckIn(int categoryId, String dateStr, bool completed, dynamic existing) async {
-    if (!completed && existing == null) return;
     final db = ref.read(databaseProvider);
-    if (existing != null) {
-      await (db.update(db.checkInRecords)
-        ..where((t) => t.id.equals(existing.id))).write(CheckInRecordsCompanion(isCompleted: Value(completed)));
+    if (completed) {
+      if (existing != null) {
+        await (db.update(db.checkInRecords)
+          ..where((t) => t.id.equals(existing.id))).write(CheckInRecordsCompanion(isCompleted: Value(true)));
+      } else {
+        await db.into(db.checkInRecords).insert(CheckInRecordsCompanion.insert(
+          categoryId: categoryId,
+          date: dateStr,
+          isCompleted: Value(true),
+        ));
+      }
     } else {
-      await db.into(db.checkInRecords).insert(CheckInRecordsCompanion.insert(
-        categoryId: categoryId,
-        date: dateStr,
-        isCompleted: Value(completed),
-      ));
+      if (existing != null) {
+        await (db.delete(db.checkInRecords)..where((t) => t.id.equals(existing.id))).go();
+      }
     }
     ref.invalidate(checkInRecordsForDateProvider(dateStr));
     ref.invalidate(checkInRecordDatesProvider);

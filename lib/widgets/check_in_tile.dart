@@ -19,9 +19,14 @@ class CheckInTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final subtitleParts = <String>[];
+    if (category.startTime != null) subtitleParts.add('⏰ ${category.startTime}');
+    if (note != null) subtitleParts.add(note!);
     return CheckboxListTile(
       title: Text('${category.emoji} ${category.name}'),
-      subtitle: note != null ? Text(note!, style: const TextStyle(fontSize: 13)) : null,
+      subtitle: subtitleParts.isNotEmpty
+          ? Text(subtitleParts.join('\n'), style: const TextStyle(fontSize: 13))
+          : null,
       value: isCompleted,
       onChanged: onToggle,
       secondary: note == null

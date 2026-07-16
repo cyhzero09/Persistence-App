@@ -3,6 +3,7 @@ class CheckInCategory {
   final String name;
   final String emoji;
   final String? description;
+  final String? startTime;
   final bool isDefault;
 
   const CheckInCategory({
@@ -10,6 +11,7 @@ class CheckInCategory {
     required this.name,
     required this.emoji,
     this.description,
+    this.startTime,
     this.isDefault = false,
   });
 
@@ -18,6 +20,7 @@ class CheckInCategory {
     'name': name,
     'emoji': emoji,
     'description': description,
+    'startTime': startTime,
     'isDefault': isDefault,
   };
 
@@ -26,6 +29,7 @@ class CheckInCategory {
     name: json['name'] as String,
     emoji: json['emoji'] as String,
     description: json['description'] as String?,
+    startTime: json['startTime'] as String?,
     isDefault: json['isDefault'] as bool? ?? false,
   );
 }

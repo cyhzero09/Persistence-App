@@ -115,6 +115,7 @@ class _CategoriesTab extends ConsumerWidget {
     final nameController = TextEditingController();
     final descController = TextEditingController();
     String emoji = '📌';
+    TimeOfDay? startTime;
     bool addReminder = false;
     DateTime reminderTime = DateTime.now().add(const Duration(hours: 9));
     final selectedWeekdays = <int>{};
@@ -141,6 +142,18 @@ class _CategoriesTab extends ConsumerWidget {
                   controller: descController,
                   maxLines: 2,
                   decoration: const InputDecoration(labelText: '簡介（可選）', border: OutlineInputBorder(), hintText: '例如：每天跑30分鐘'),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(startTime != null ? '⏰ ${startTime!.format(context)}' : '⏰ 設置開始時間（可選）'),
+                  trailing: startTime != null
+                      ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setDialogState(() => startTime = null))
+                      : null,
+                  onTap: () async {
+                    final t = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+                    if (t != null) setDialogState(() => startTime = t);
+                  },
                 ),
                 const SizedBox(height: 12),
                 Text('選擇圖示：$emoji', style: const TextStyle(fontSize: 18)),
@@ -249,6 +262,7 @@ class _CategoriesTab extends ConsumerWidget {
                   name: nameController.text.trim(),
                   emoji: emoji,
                   description: descController.text.trim().isNotEmpty ? Value(descController.text.trim()) : const Value.absent(),
+                  startTime: startTime != null ? Value('${startTime!.hour.toString().padLeft(2, '0')}:${startTime!.minute.toString().padLeft(2, '0')}') : const Value.absent(),
                 ));
                 if (addReminder) {
                   final weekdaysStr = selectedWeekdays.isNotEmpty ? selectedWeekdays.join(',') : null;
@@ -277,6 +291,12 @@ class _CategoriesTab extends ConsumerWidget {
     final nameController = TextEditingController(text: category.name);
     final descController = TextEditingController(text: category.description ?? '');
     String emoji = category.emoji;
+    TimeOfDay? startTime = category.startTime != null
+        ? TimeOfDay(
+            hour: int.parse(category.startTime!.split(':')[0]),
+            minute: int.parse(category.startTime!.split(':')[1]),
+          )
+        : null;
     bool emojiExpanded = false;
     showDialog(
       context: context,
@@ -296,6 +316,18 @@ class _CategoriesTab extends ConsumerWidget {
                   controller: descController,
                   maxLines: 2,
                   decoration: const InputDecoration(labelText: '簡介（可選）', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(startTime != null ? '⏰ ${startTime!.format(context)}' : '⏰ 設置開始時間（可選）'),
+                  trailing: startTime != null
+                      ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setDialogState(() => startTime = null))
+                      : null,
+                  onTap: () async {
+                    final t = await showTimePicker(context: context, initialTime: startTime ?? TimeOfDay.now());
+                    if (t != null) setDialogState(() => startTime = t);
+                  },
                 ),
                 const SizedBox(height: 12),
                 Text('選擇圖示：$emoji', style: const TextStyle(fontSize: 18)),
@@ -355,6 +387,7 @@ class _CategoriesTab extends ConsumerWidget {
                     name: Value(nameController.text.trim()),
                     emoji: Value(emoji),
                     description: descController.text.trim().isNotEmpty ? Value(descController.text.trim()) : const Value.absent(),
+                    startTime: startTime != null ? Value('${startTime!.hour.toString().padLeft(2, '0')}:${startTime!.minute.toString().padLeft(2, '0')}') : const Value.absent(),
                   ));
                 ref.invalidate(categoriesProvider);
                 if (!ctx.mounted) return;
@@ -400,6 +433,10 @@ class _DiaryTab extends ConsumerWidget {
                           icon: const Icon(Icons.edit_outlined, size: 18),
                           onPressed: () => _editDiary(context, ref, entry),
                         ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 18),
+                          onPressed: () => _deleteDiary(ref, entry.id),
+                        ),
                       ],
                     ),
                     onTap: () => Navigator.push(context, MaterialPageRoute(
@@ -424,6 +461,12 @@ class _DiaryTab extends ConsumerWidget {
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => DiaryEditPage(entry: entry),
     ));
+  }
+
+  void _deleteDiary(WidgetRef ref, int id) async {
+    final db = ref.read(databaseProvider);
+    await (db.delete(db.diaryEntries)..where((t) => t.id.equals(id))).go();
+    ref.invalidate(diaryEntriesProvider);
   }
 }
 

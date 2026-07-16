@@ -15,3 +15,8 @@ final diaryEntriesProvider = FutureProvider<List<DiaryEntry>>((ref) async {
     checkInRecordId: r.checkInRecordId,
   )).toList();
 });
+
+final diaryDateStringsProvider = FutureProvider<List<String>>((ref) async {
+  final entries = await ref.watch(diaryEntriesProvider.future);
+  return entries.map((e) => e.date.substring(0, 10)).toSet().toList()..sort();
+});

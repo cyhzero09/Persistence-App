@@ -13,7 +13,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -28,6 +28,9 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(diaryEntries, diaryEntries.title);
           await m.addColumn(reminders, reminders.repeatWeekdays);
           await m.addColumn(reminders, reminders.repeatEndDate);
+        }
+        if (from < 3) {
+          await m.addColumn(checkInCategories, checkInCategories.startTime);
         }
       },
     );

@@ -17,22 +17,22 @@ class WeekCalendar extends StatelessWidget {
   Widget build(BuildContext context) {
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
-    final monday = _mondayOf(selectedDate);
+    final sunday = _sundayOf(selectedDate);
 
     return Column(
       children: [
-        _buildWeekRow(context, monday.subtract(const Duration(days: 7)), todayDate),
+        _buildWeekRow(context, sunday.subtract(const Duration(days: 7)), todayDate),
         const SizedBox(height: 2),
-        _buildWeekRow(context, monday, todayDate),
+        _buildWeekRow(context, sunday, todayDate),
         const SizedBox(height: 2),
-        _buildWeekRow(context, monday.add(const Duration(days: 7)), todayDate),
+        _buildWeekRow(context, sunday.add(const Duration(days: 7)), todayDate),
       ],
     );
   }
 
-  DateTime _mondayOf(DateTime date) {
+  DateTime _sundayOf(DateTime date) {
     final d = DateTime(date.year, date.month, date.day);
-    return d.subtract(Duration(days: d.weekday - 1));
+    return d.subtract(Duration(days: d.weekday % 7));
   }
 
   Widget _buildWeekRow(BuildContext context, DateTime weekStart, DateTime todayDate) {

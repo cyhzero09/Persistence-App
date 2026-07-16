@@ -215,7 +215,7 @@ class SettingsPage extends ConsumerWidget {
       final data = {
         'version': 1,
         'exportDate': DateTime.now().toIso8601String(),
-        'categories': cats.map((r) => CheckInCategory(id: r.id, name: r.name, emoji: r.emoji, description: r.description, isDefault: r.isDefault).toJson()).toList(),
+        'categories': cats.map((r) => CheckInCategory(id: r.id, name: r.name, emoji: r.emoji, description: r.description, startTime: r.startTime, isDefault: r.isDefault).toJson()).toList(),
         'records': records.map((r) => CheckInRecord(id: r.id, categoryId: r.categoryId, date: r.date, isCompleted: r.isCompleted, note: r.note).toJson()).toList(),
         'diaries': diaries.map((r) => DiaryEntry(id: r.id, date: r.date, title: r.title, content: r.content, checkInRecordId: r.checkInRecordId).toJson()).toList(),
         'reminders': reminders.map((r) => Reminder(id: r.id, title: r.title, dateTime: r.reminderDateTime, repeatWeekdays: r.repeatWeekdays, repeatEndDate: r.repeatEndDate, categoryId: r.categoryId, isCompleted: r.isCompleted).toJson()).toList(),
@@ -296,7 +296,7 @@ class SettingsPage extends ConsumerWidget {
       for (final c in json['categories'] as List) {
         final m = CheckInCategory.fromJson(c as Map<String, dynamic>);
         await db.into(db.checkInCategories).insert(CheckInCategoriesCompanion.insert(
-          name: m.name, emoji: m.emoji, description: m.description != null ? Value(m.description!) : const Value.absent(), isDefault: Value(m.isDefault),
+          name: m.name, emoji: m.emoji, description: m.description != null ? Value(m.description!) : const Value.absent(), startTime: m.startTime != null ? Value(m.startTime!) : const Value.absent(), isDefault: Value(m.isDefault),
         ));
       }
       for (final r in json['records'] as List) {

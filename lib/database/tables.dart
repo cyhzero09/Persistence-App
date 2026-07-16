@@ -5,6 +5,7 @@ class CheckInCategories extends Table {
   TextColumn get name => text()();
   TextColumn get emoji => text()();
   TextColumn get description => text().nullable()();
+  TextColumn get startTime => text().nullable()();
   BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
 }
 

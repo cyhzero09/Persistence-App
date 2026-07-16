@@ -12,6 +12,7 @@ final categoriesProvider = FutureProvider<List<CheckInCategory>>((ref) async {
     name: r.name,
     emoji: r.emoji,
     description: r.description,
+    startTime: r.startTime,
     isDefault: r.isDefault,
   )).toList();
 });

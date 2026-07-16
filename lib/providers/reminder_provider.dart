@@ -19,6 +19,11 @@ final remindersProvider = FutureProvider<List<Reminder>>((ref) async {
   )).toList();
 });
 
+final reminderDateStringsProvider = FutureProvider<List<String>>((ref) async {
+  final reminders = await ref.watch(remindersProvider.future);
+  return reminders.map((r) => r.dateTime.substring(0, 10)).toSet().toList()..sort();
+});
+
 final reminderNotifierProvider = Provider<ReminderNotifier>((ref) {
   return ReminderNotifier(ref);
 });
