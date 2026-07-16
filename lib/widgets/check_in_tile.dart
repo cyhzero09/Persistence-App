@@ -34,7 +34,7 @@ class CheckInTile extends StatelessWidget {
       final days = category.repeatWeekdays!.split(',').map((s) => _weekdayLabels[int.parse(s)]).join('');
       subtitleParts.add('每週 $days');
     }
-    if (record?.completedAt != null) {
+    if (record?.isCompleted == true && record?.completedAt != null) {
       final parts = record!.completedAt!.split(' ');
       if (parts.length >= 2) {
         subtitleParts.add('✓ ${parts[1].substring(0, 5)}');

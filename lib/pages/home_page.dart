@@ -427,9 +427,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     TimeOfDay? catEndTime;
     final catWeekdays = <int>{};
     bool addReminder = false;
-    DateTime reminderStart = _selectedDate;
     TimeOfDay? reminderTime;
-    DateTime? reminderEndDate;
 
     bool emojiExpanded = false;
 
@@ -499,7 +497,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 const SizedBox(height: 12),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(catStartTime != null ? '⏰ 開始 ${catStartTime!.format(context)}' : '⏰ 開始時間（必填）'),
+                  title: Text(catStartTime != null ? '⏰ 開始 ${catStartTime!.format(context)}' : '⏰ 開始時間'),
                   trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
                     final t = await showTimePicker(context: context, initialTime: catStartTime ?? TimeOfDay.now());
                     if (t != null) setDialogState(() => catStartTime = t);
@@ -507,14 +505,14 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(catEndTime != null ? '⏰ 結束 ${catEndTime!.format(context)}' : '⏰ 結束時間（必填）'),
+                  title: Text(catEndTime != null ? '⏰ 結束 ${catEndTime!.format(context)}' : '⏰ 結束時間'),
                   trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
                     final t = await showTimePicker(context: context, initialTime: catEndTime ?? TimeOfDay.now());
                     if (t != null) setDialogState(() => catEndTime = t);
                   }),
                 ),
                 const SizedBox(height: 8),
-                Text('重複天數（必填）：', style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                Text('重複天數：', style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 const SizedBox(height: 4),
                 Wrap(
                   spacing: 4,
@@ -532,7 +530,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 const Divider(),
                 Row(
                   children: [
-                    const Text('新增提醒（選填）'),
+                    const Text('新增提醒'),
                     Switch(
                       value: addReminder,
                       onChanged: (v) => setDialogState(() => addReminder = v),
@@ -541,20 +539,6 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 ),
                 if (addReminder) ...[
                   const SizedBox(height: 8),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('開始：${DateFormat('yyyy/M/d', 'zh-TW').format(reminderStart)}'),
-                    leading: const Icon(Icons.calendar_today),
-                    onTap: () async {
-                      final dt = await showDatePicker(
-                        context: context,
-                        initialDate: reminderStart,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 3650)),
-                      );
-                      if (dt != null) setDialogState(() => reminderStart = dt);
-                    },
-                  ),
                   Row(
                     children: [
                       const Text('設定時間'),
@@ -576,26 +560,6 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                         if (tm != null) setDialogState(() => reminderTime = tm);
                       },
                     ),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(reminderEndDate != null
-                        ? '結束：${DateFormat('yyyy/M/d', 'zh-TW').format(reminderEndDate!)}'
-                        : '結束日期（可選）'),
-                    trailing: reminderEndDate != null
-                        ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setDialogState(() => reminderEndDate = null))
-                        : null,
-                    leading: const Icon(Icons.event),
-                    onTap: () async {
-                      final dt = await showDatePicker(
-                        context: context,
-                        initialDate: reminderEndDate ?? reminderStart.add(const Duration(days: 30)),
-                        firstDate: reminderStart,
-                        lastDate: DateTime.now().add(const Duration(days: 3650)),
-                      );
-                      if (dt != null) setDialogState(() => reminderEndDate = dt);
-                    },
-                  ),
                 ],
               ],
             ),
@@ -615,15 +579,13 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                   endTime: Value('${catEndTime!.hour.toString().padLeft(2, '0')}:${catEndTime!.minute.toString().padLeft(2, '0')}'),
                   repeatWeekdays: Value(weekdaysStr),
                 ));
-                if (addReminder) {
-                  final reminderDt = reminderTime != null
-                      ? DateTime(reminderStart.year, reminderStart.month, reminderStart.day, reminderTime!.hour, reminderTime!.minute)
-                      : reminderStart;
+                if (addReminder && reminderTime != null) {
+                  final reminderDt = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day,
+                      reminderTime!.hour, reminderTime!.minute);
                   final id = await db.into(db.reminders).insert(RemindersCompanion.insert(
                     title: nameController.text.trim(),
                     reminderDateTime: reminderDt.toIso8601String(),
                     repeatWeekdays: Value(weekdaysStr),
-                    repeatEndDate: reminderEndDate != null ? Value(DateFormat('yyyy-MM-dd').format(reminderEndDate!)) : const Value.absent(),
                     categoryId: Value(catId),
                   ));
                   if (reminderDt.isAfter(DateTime.now())) {
@@ -735,7 +697,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 const SizedBox(height: 12),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(editStartTime != null ? '⏰ 開始 ${editStartTime!.format(context)}' : '⏰ 開始時間（必填）'),
+                  title: Text(editStartTime != null ? '⏰ 開始 ${editStartTime!.format(context)}' : '⏰ 開始時間'),
                   trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
                     final t = await showTimePicker(context: context, initialTime: editStartTime ?? TimeOfDay.now());
                     if (t != null) setDialogState(() => editStartTime = t);
@@ -743,14 +705,14 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(editEndTime != null ? '⏰ 結束 ${editEndTime!.format(context)}' : '⏰ 結束時間（必填）'),
+                  title: Text(editEndTime != null ? '⏰ 結束 ${editEndTime!.format(context)}' : '⏰ 結束時間'),
                   trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
                     final t = await showTimePicker(context: context, initialTime: editEndTime ?? TimeOfDay.now());
                     if (t != null) setDialogState(() => editEndTime = t);
                   }),
                 ),
                 const SizedBox(height: 8),
-                Text('重複天數（必填）：', style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                Text('重複天數：', style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 const SizedBox(height: 4),
                 Wrap(
                   spacing: 4,
