@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -16,6 +17,7 @@ import 'diary_edit_page.dart';
 import 'category_detail_page.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../l10n/locale_helpers.dart';
+import '../utils/confirm_delete.dart';
 
 const _emojis = [
   '🏃','📚','💧','🧘','💪','🎵','✍','🍎','☕','🎮','📝','🛌','🎯','🌈',
@@ -108,6 +110,7 @@ class _CategoriesTab extends ConsumerWidget {
   }
 
   Future<void> _deleteCategory(WidgetRef ref, int id) async {
+    if (!await confirmDelete(context)) return;
     final db = ref.read(databaseProvider);
     await (db.delete(db.checkInRecords)..where((t) => t.categoryId.equals(id))).go();
     await (db.delete(db.checkInCategories)..where((t) => t.id.equals(id))).go();
@@ -518,6 +521,7 @@ class _DiaryTab extends ConsumerWidget {
   }
 
   void _deleteDiary(WidgetRef ref, int id) async {
+    if (!await confirmDelete(context)) return;
     final db = ref.read(databaseProvider);
     await (db.delete(db.diaryEntries)..where((t) => t.id.equals(id))).go();
     ref.invalidate(diaryEntriesProvider);
@@ -539,6 +543,7 @@ class _RemindersTab extends ConsumerWidget {
                 itemBuilder: (_, i) => Dismissible(
                   key: ValueKey(reminders[i].id),
                   direction: DismissDirection.endToStart,
+                  confirmDismiss: (_) => confirmDelete(context),
                   onDismissed: (_) => ref.read(reminderNotifierProvider).deleteReminder(reminders[i].id),
                   child: _ReminderTile(reminder: reminders[i]),
                 ),
@@ -602,7 +607,11 @@ class _ReminderTile extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            onPressed: () => ref.read(reminderNotifierProvider).deleteReminder(reminder.id),
+            onPressed: () async {
+              if (await confirmDelete(context)) {
+                await ref.read(reminderNotifierProvider).deleteReminder(reminder.id);
+              }
+            },
           ),
         ],
       ),
@@ -781,28 +790,34 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
                 await (db.update(db.reminders)
                   ..where((t) => t.id.equals(widget.editReminder!.id)))
                   .write(companion);
-                await NotificationService().cancelReminder(widget.editReminder!.id);
-                if (reminderDt.isAfter(DateTime.now())) {
-                  await NotificationService().scheduleReminder(
-                    id: widget.editReminder!.id,
-                    title: _titleController.text.trim(),
-                    body: l10n.reminderNotification(_titleController.text.trim()),
-                    scheduledDate: reminderDt,
-                  );
-                }
+                ref.invalidate(remindersProvider);
+                Navigator.pop(context);
+                // 通知取消/重排在后台执行，不阻塞界面
+                unawaited(() async {
+                  await NotificationService().cancelReminder(widget.editReminder!.id);
+                  if (reminderDt.isAfter(DateTime.now())) {
+                    await NotificationService().scheduleReminder(
+                      id: widget.editReminder!.id,
+                      title: _titleController.text.trim(),
+                      body: l10n.reminderNotification(_titleController.text.trim()),
+                      scheduledDate: reminderDt,
+                    );
+                  }
+                }());
               } else {
                 final id = await db.into(db.reminders).insert(companion);
+                ref.invalidate(remindersProvider);
+                Navigator.pop(context);
+                // 通知调度在后台进行，不阻塞界面响应
                 if (reminderDt.isAfter(DateTime.now())) {
-                  await NotificationService().scheduleReminder(
+                  unawaited(NotificationService().scheduleReminder(
                     id: id,
                     title: _titleController.text.trim(),
                     body: l10n.reminderNotification(_titleController.text.trim()),
                     scheduledDate: reminderDt,
-                  );
+                  ));
                 }
               }
-              ref.invalidate(remindersProvider);
-              Navigator.pop(context);
             },
             child: Text(widget.editReminder != null ? l10n.save : l10n.add),
           ),

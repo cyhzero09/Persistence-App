@@ -203,5 +203,8 @@
   },
   "welcomeTitle": "欢迎使用",
   "welcomeMessage": "请选择您偏好的语言",
-  "continueButton": "继续"
+  "continueButton": "继续",
+  "deleteConfirmTitle": "删除确认",
+  "deleteConfirmMessage": "确定要删除吗？此操作不可撤销。",
+  "delete": "删除"
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -264,15 +265,16 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
       title: _reminderTitleController.text.trim(),
       reminderDateTime: reminderDt.toIso8601String(),
     ));
+    ref.invalidate(remindersProvider);
+    if (context.mounted) Navigator.pop(context);
+    // 通知调度在后台进行，不阻塞界面响应
     if (reminderDt.isAfter(DateTime.now())) {
-      await NotificationService().scheduleReminder(
+      unawaited(NotificationService().scheduleReminder(
         id: id,
         title: _reminderTitleController.text.trim(),
         body: l10n.reminderNotification(_reminderTitleController.text.trim()),
         scheduledDate: reminderDt,
-      );
+      ));
     }
-    ref.invalidate(remindersProvider);
-    if (context.mounted) Navigator.pop(context);
   }
 }

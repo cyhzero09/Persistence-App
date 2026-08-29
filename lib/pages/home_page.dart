@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' hide Column;
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -21,6 +22,7 @@ import 'diary_edit_page.dart';
 import 'category_detail_page.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../l10n/locale_helpers.dart';
+import '../utils/confirm_delete.dart';
 
 const _emojis = [
   '🏃','📚','💧','🧘','💪','🎵','✍','🍎','☕','🎮','📝','🛌','🎯','🌈',
@@ -413,6 +415,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
   }
 
   Future<void> _deleteCategory(int id) async {
+    if (!await confirmDelete(context)) return;
     final db = ref.read(databaseProvider);
     await (db.delete(db.checkInRecords)..where((t) => t.categoryId.equals(id))).go();
     await (db.delete(db.checkInCategories)..where((t) => t.id.equals(id))).go();
@@ -767,6 +770,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
   }
 
   Future<void> _deleteDiary(int id) async {
+    if (!await confirmDelete(context)) return;
     final db = ref.read(databaseProvider);
     await (db.delete(db.diaryEntries)..where((t) => t.id.equals(id))).go();
     ref.invalidate(diaryEntriesProvider);
@@ -774,10 +778,12 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
 
   Future<void> _toggleReminder(int id, bool completed) async {
     final db = ref.read(databaseProvider);
+    await (db.update(db.reminders)..where((t) => t.id.equals(id))).write(RemindersCompanion(
+      isCompleted: Value(completed),
+    ));
+    // 先刷新 UI，通知操作后台执行，避免卡顿
+    ref.invalidate(remindersProvider);
     try {
-      await (db.update(db.reminders)..where((t) => t.id.equals(id))).write(RemindersCompanion(
-        isCompleted: Value(completed),
-      ));
       if (completed) {
         await NotificationService().cancelReminder(id);
       } else {
@@ -798,7 +804,6 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     } catch (_) {
       // 通知调度失败不应影响提醒状态的 UI 刷新
     }
-    ref.invalidate(remindersProvider);
   }
 
   void _editReminder(BuildContext context, Reminder reminder) {
@@ -812,10 +817,12 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
   }
 
   Future<void> _deleteReminder(int id) async {
+    if (!await confirmDelete(context)) return;
     final db = ref.read(databaseProvider);
     await (db.delete(db.reminders)..where((t) => t.id.equals(id))).go();
-    await NotificationService().cancelReminder(id);
+    // 先刷新 UI，取消通知后台执行，避免卡顿
     ref.invalidate(remindersProvider);
+    unawaited(NotificationService().cancelReminder(id));
   }
 }
 
@@ -978,17 +985,20 @@ class _EditReminderSheetState extends ConsumerState<_EditReminderSheet> {
               await (db.update(db.reminders)
                 ..where((t) => t.id.equals(widget.reminder.id)))
                 .write(companion);
-              await NotificationService().cancelReminder(widget.reminder.id);
-              if (reminderDt.isAfter(DateTime.now())) {
-                await NotificationService().scheduleReminder(
-                  id: widget.reminder.id,
-                  title: _titleController.text.trim(),
-                  body: l10n.reminderNotification(_titleController.text.trim()),
-                  scheduledDate: reminderDt,
-                );
-              }
               ref.invalidate(remindersProvider);
               if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+              // 通知取消/重排在后台执行，不阻塞界面
+              unawaited(() async {
+                await NotificationService().cancelReminder(widget.reminder.id);
+                if (reminderDt.isAfter(DateTime.now())) {
+                  await NotificationService().scheduleReminder(
+                    id: widget.reminder.id,
+                    title: _titleController.text.trim(),
+                    body: l10n.reminderNotification(_titleController.text.trim()),
+                    scheduledDate: reminderDt,
+                  );
+                }
+              }());
             },
             child: Text(l10n.save),
           ),

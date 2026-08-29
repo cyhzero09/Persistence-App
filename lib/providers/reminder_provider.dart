@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/database.dart' hide Reminder;
@@ -36,25 +37,26 @@ class ReminderNotifier {
   Future<void> addReminder(RemindersCompanion companion, {String? notificationBody}) async {
     final db = _ref.read(databaseProvider);
     final id = await db.into(db.reminders).insert(companion);
-    final reminderDateTime = companion.reminderDateTime.value;
-    final title = companion.title.value;
-    final dt = DateTime.parse(reminderDateTime);
-    if (dt.isAfter(DateTime.now())) {
-      await NotificationService().scheduleReminder(
-        id: id,
-        title: title,
-        body: notificationBody ?? title,
-        scheduledDate: dt,
-      );
-    }
     _ref.invalidate(remindersProvider);
+    final dt = DateTime.parse(companion.reminderDateTime.value);
+    if (dt.isAfter(DateTime.now())) {
+      // 通知调度在后台进行，不阻塞界面刷新
+      unawaited(NotificationService().scheduleReminder(
+        id: id,
+        title: companion.title.value,
+        body: notificationBody ?? companion.title.value,
+        scheduledDate: dt,
+      ));
+    }
   }
 
   Future<void> toggleReminder(int id, bool completed) async {
     final db = _ref.read(databaseProvider);
+    await (db.update(db.reminders)
+      ..where((t) => t.id.equals(id))).write(RemindersCompanion(isCompleted: Value(completed)));
+    // 先刷新 UI，通知操作后台执行，避免卡顿
+    _ref.invalidate(remindersProvider);
     try {
-      await (db.update(db.reminders)
-        ..where((t) => t.id.equals(id))).write(RemindersCompanion(isCompleted: Value(completed)));
       if (completed) {
         await NotificationService().cancelReminder(id);
       } else {
@@ -63,7 +65,6 @@ class ReminderNotifier {
     } catch (_) {
       // 通知调度失败不应影响提醒状态的 UI 刷新
     }
-    _ref.invalidate(remindersProvider);
   }
 
   Future<void> _rescheduleIfPending(AppDatabase db, int id) async {
@@ -84,7 +85,8 @@ class ReminderNotifier {
   Future<void> deleteReminder(int id) async {
     final db = _ref.read(databaseProvider);
     await (db.delete(db.reminders)..where((t) => t.id.equals(id))).go();
-    await NotificationService().cancelReminder(id);
+    // 先刷新 UI，取消通知后台执行，避免卡顿
     _ref.invalidate(remindersProvider);
+    unawaited(NotificationService().cancelReminder(id));
   }
 }
