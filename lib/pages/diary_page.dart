@@ -4,18 +4,21 @@ import 'package:intl/intl.dart';
 import '../providers/diary_provider.dart';
 import 'diary_detail_page.dart';
 import 'diary_edit_page.dart';
+import '../l10n/generated/app_localizations.dart';
+import '../l10n/locale_helpers.dart';
 
 class DiaryPage extends ConsumerWidget {
   const DiaryPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final diaryAsync = ref.watch(diaryEntriesProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('日記')),
+      appBar: AppBar(title: Text(l10n.diary)),
       body: diaryAsync.when(
         data: (entries) => entries.isEmpty
-            ? const Center(child: Text('尚無日記'))
+            ? Center(child: Text(l10n.noDiary))
             : ListView.builder(
                 itemCount: entries.length,
                 itemBuilder: (_, i) {
@@ -27,7 +30,7 @@ class DiaryPage extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    subtitle: Text(DateFormat('yyyy/M/d HH:mm', 'zh-TW').format(dt)),
+                    subtitle: Text(DateFormat('yyyy/M/d HH:mm', intlLocaleOf(context)).format(dt)),
                     trailing: entry.checkInRecordId != null ? const Icon(Icons.check_circle_outline, size: 16) : null,
                     onTap: () => Navigator.push(context, MaterialPageRoute(
                       builder: (_) => DiaryDetailPage(entry: entry),

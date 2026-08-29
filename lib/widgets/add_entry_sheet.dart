@@ -9,6 +9,9 @@ import '../providers/diary_provider.dart';
 import '../providers/database_provider.dart';
 import '../notification_service.dart';
 import '../models/check_in_category.dart';
+import '../l10n/generated/app_localizations.dart';
+import '../l10n/locale_helpers.dart';
+
 class AddEntrySheet extends ConsumerStatefulWidget {
   final DateTime selectedDate;
   final int initialTab;
@@ -39,7 +42,7 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
     super.initState();
     _tabController = TabController(length: 3, vsync: this, initialIndex: widget.initialTab);
     _diaryDate = widget.selectedDate;
-    _diaryDateController.text = DateFormat('yyyy/M/d', 'zh-TW').format(_diaryDate);
+    _diaryDateController.text = DateFormat('yyyy/M/d', intlLocaleOf(context)).format(_diaryDate);
   }
 
   @override
@@ -57,6 +60,7 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider);
     final dateStr = DateFormat('yyyy-MM-dd').format(widget.selectedDate);
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -67,10 +71,10 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
         children: [
           TabBar(
             controller: _tabController,
-            tabs: const [
-              Tab(text: '打卡'),
-              Tab(text: '日記'),
-              Tab(text: '提醒'),
+            tabs: [
+              Tab(text: l10n.tabCheckIn),
+              Tab(text: l10n.tabDiary),
+              Tab(text: l10n.tabReminder),
             ],
           ),
           SizedBox(
@@ -90,19 +94,20 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
   }
 
   Widget _buildCheckInTab(AsyncValue<List<CheckInCategory>> categoriesAsync, String dateStr) {
+    final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('新增打卡 - ${DateFormat('M/d', 'zh-TW').format(widget.selectedDate)}',
+          Text(l10n.addCheckInFor(DateFormat('M/d', intlLocaleOf(context)).format(widget.selectedDate)),
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           categoriesAsync.when(
             data: (cats) => DropdownButtonFormField<int>(
               value: _selectedCategoryId,
-              decoration: const InputDecoration(labelText: '打卡項目', border: OutlineInputBorder()),
+              decoration: InputDecoration(labelText: l10n.checkInItem, border: const OutlineInputBorder()),
               items: cats.map((c) => DropdownMenuItem(
                 value: c.id,
                 child: Text('${c.emoji} ${c.name}'),
@@ -116,12 +121,12 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
           TextField(
             controller: _noteController,
             maxLines: 3,
-            decoration: const InputDecoration(labelText: '備註', border: OutlineInputBorder(), hintText: '今天狀態如何？'),
+            decoration: InputDecoration(labelText: l10n.note, border: const OutlineInputBorder(), hintText: l10n.noteHint),
           ),
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _selectedCategoryId == null ? null : () => _saveCheckIn(dateStr),
-            child: const Text('新增打卡'),
+            child: Text(l10n.addCheckIn),
           ),
         ],
       ),
@@ -129,17 +134,18 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
   }
 
   Widget _buildDiaryTab() {
+    final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('新增日記', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(l10n.addDiary, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           TextField(
             controller: _diaryDateController,
-            decoration: const InputDecoration(labelText: '日期 *', border: OutlineInputBorder(), suffixIcon: Icon(Icons.calendar_today)),
+            decoration: InputDecoration(labelText: l10n.dateRequired, border: const OutlineInputBorder(), suffixIcon: const Icon(Icons.calendar_today)),
             readOnly: true,
             onTap: () async {
               final dt = await showDatePicker(
@@ -151,7 +157,7 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
               if (dt != null) {
                 setState(() {
                   _diaryDate = dt;
-                  _diaryDateController.text = DateFormat('yyyy/M/d', 'zh-TW').format(dt);
+                  _diaryDateController.text = DateFormat('yyyy/M/d', intlLocaleOf(context)).format(dt);
                 });
               }
             },
@@ -159,19 +165,19 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
           const SizedBox(height: 12),
           TextField(
             controller: _diaryTitleController,
-            decoration: const InputDecoration(labelText: '標題（可選）', border: OutlineInputBorder()),
+            decoration: InputDecoration(labelText: l10n.titleOptional, border: const OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _diaryContentController,
             maxLines: 5,
-            decoration: const InputDecoration(labelText: '內容', border: OutlineInputBorder(), hintText: '今天發生了什麼事...'),
+            decoration: InputDecoration(labelText: l10n.contentLabel, border: const OutlineInputBorder(), hintText: l10n.diaryContentHint),
             onChanged: (v) => setState(() => _diaryHasContent = v.trim().isNotEmpty),
           ),
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _diaryHasContent ? () => _saveDiary() : null,
-            child: const Text('新增日記'),
+            child: Text(l10n.addDiary),
           ),
         ],
       ),
@@ -179,22 +185,23 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
   }
 
   Widget _buildReminderTab(AsyncValue<List<CheckInCategory>> categoriesAsync) {
+    final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('新增提醒', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(l10n.addReminder, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           TextField(
             controller: _reminderTitleController,
-            decoration: const InputDecoration(labelText: '標題', border: OutlineInputBorder()),
+            decoration: InputDecoration(labelText: l10n.title, border: const OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              const Text('設定時間'),
+              Text(l10n.setTime),
               Switch(
                 value: _reminderTime != null,
                 onChanged: (v) => setState(() => _reminderTime = v ? TimeOfDay.now() : null),
@@ -214,7 +221,7 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
           const SizedBox(height: 16),
           FilledButton(
             onPressed: _reminderTitleController.text.trim().isEmpty ? null : () => _saveReminder(),
-            child: const Text('新增提醒'),
+            child: Text(l10n.addReminder),
           ),
         ],
       ),
@@ -248,6 +255,7 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
   }
 
   Future<void> _saveReminder() async {
+    final l10n = AppLocalizations.of(context);
     final db = ref.read(databaseProvider);
     if (_reminderTime == null) return;
     final reminderDt = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day,
@@ -260,7 +268,7 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
       await NotificationService().scheduleReminder(
         id: id,
         title: _reminderTitleController.text.trim(),
-        body: '提醒：${_reminderTitleController.text.trim()}',
+        body: l10n.reminderNotification(_reminderTitleController.text.trim()),
         scheduledDate: reminderDt,
       );
     }

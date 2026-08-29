@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/database_provider.dart';
 import 'package:drift/drift.dart';
+import '../l10n/generated/app_localizations.dart';
 
 final timelineProvider = FutureProvider<List<_TimelineItem>>((ref) async {
   final db = ref.read(databaseProvider);
@@ -18,7 +19,7 @@ final timelineProvider = FutureProvider<List<_TimelineItem>>((ref) async {
     items.add(_TimelineItem(
       date: r.date,
       type: 'checkin',
-      title: cat != null ? '${cat.emoji} ${cat.name}' : '未知',
+      title: cat != null ? '${cat.emoji} ${cat.name}' : 'unknown',
       subtitle: r.note,
       isCompleted: r.isCompleted,
     ));
@@ -27,7 +28,7 @@ final timelineProvider = FutureProvider<List<_TimelineItem>>((ref) async {
     items.add(_TimelineItem(
       date: d.date.substring(0, 10),
       type: 'diary',
-      title: '📝 日記',
+      title: 'diary',
       subtitle: d.content.split('\n').first,
     ));
   }
@@ -49,18 +50,22 @@ class TimelinePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final timelineAsync = ref.watch(timelineProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('時間軸')),
+      appBar: AppBar(title: Text(l10n.timeline)),
       body: timelineAsync.when(
         data: (items) => items.isEmpty
-            ? const Center(child: Text('尚無紀錄'))
+            ? Center(child: Text(l10n.noRecords))
             : RefreshIndicator(
                 onRefresh: () => ref.refresh(timelineProvider.future),
                 child: ListView.builder(
                   itemCount: items.length,
                   itemBuilder: (_, i) {
                     final item = items[i];
+                    final title = item.title == 'diary'
+                        ? '📝 ${l10n.diaryEntry}'
+                        : (item.title == 'unknown' ? l10n.unknown : item.title);
                     return ListTile(
                       leading: Icon(
                         item.type == 'checkin' ? Icons.check_circle : Icons.book,
@@ -68,7 +73,7 @@ class TimelinePage extends ConsumerWidget {
                             ? (item.isCompleted ? Colors.green : Colors.grey)
                             : Colors.blue,
                       ),
-                      title: Text(item.title),
+                      title: Text(title),
                       subtitle: Text('${item.date}${item.subtitle != null ? ' - ${item.subtitle}' : ''}'),
                     );
                   },

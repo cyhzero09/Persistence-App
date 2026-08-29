@@ -6,6 +6,8 @@ import '../database/database.dart' hide Reminder;
 import '../providers/check_in_provider.dart';
 import '../providers/reminder_provider.dart';
 import '../models/reminder.dart';
+import '../l10n/generated/app_localizations.dart';
+import '../l10n/locale_helpers.dart';
 
 class RemindersPage extends ConsumerWidget {
   const RemindersPage({super.key});
@@ -13,12 +15,13 @@ class RemindersPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final remindersAsync = ref.watch(remindersProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('提醒')),
+      appBar: AppBar(title: Text(l10n.reminders)),
       body: remindersAsync.when(
         data: (reminders) => reminders.isEmpty
-            ? const Center(child: Text('尚無提醒'))
+            ? Center(child: Text(l10n.noReminders))
             : ListView.builder(
                 itemCount: reminders.length,
                 itemBuilder: (_, i) => Dismissible(
@@ -57,7 +60,7 @@ class _ReminderTile extends ConsumerWidget {
       title: Text(reminder.title, style: TextStyle(
         decoration: reminder.isCompleted ? TextDecoration.lineThrough : null,
       )),
-      subtitle: Text(DateFormat('M/d HH:mm', 'zh-TW').format(dt)),
+      subtitle: Text(DateFormat('M/d HH:mm', intlLocaleOf(context)).format(dt)),
       leading: Checkbox(
         value: reminder.isCompleted,
         onChanged: (v) => ref.read(reminderNotifierProvider).toggleReminder(reminder.id, v ?? false),
@@ -91,6 +94,7 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider);
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -100,15 +104,15 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('新增提醒', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(l10n.addReminder, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           TextField(
             controller: _titleController,
-            decoration: const InputDecoration(labelText: '標題', border: OutlineInputBorder()),
+            decoration: InputDecoration(labelText: l10n.title, border: const OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
           ListTile(
-            title: Text(DateFormat('yyyy/M/d HH:mm', 'zh-TW').format(_dateTime)),
+            title: Text(DateFormat('yyyy/M/d HH:mm', intlLocaleOf(context)).format(_dateTime)),
             leading: const Icon(Icons.access_time),
             onTap: () async {
               final dt = await showDatePicker(
@@ -128,9 +132,9 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
           categoriesAsync.when(
             data: (cats) => DropdownButtonFormField<int?>(
               value: _selectedCategoryId,
-              decoration: const InputDecoration(labelText: '綁定打卡項目（可選）'),
+              decoration: InputDecoration(labelText: l10n.bindCheckInOptional),
               items: [
-                const DropdownMenuItem(value: null, child: Text('不綁定')),
+                DropdownMenuItem(value: null, child: Text(l10n.noBinding)),
                 ...cats.map((c) => DropdownMenuItem(value: c.id, child: Text('${c.emoji} ${c.name}'))),
               ],
               onChanged: (v) => setState(() => _selectedCategoryId = v),
@@ -141,14 +145,17 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
           const SizedBox(height: 16),
           FilledButton(
             onPressed: _titleController.text.trim().isEmpty ? null : () {
-              ref.read(reminderNotifierProvider).addReminder(RemindersCompanion.insert(
-                title: _titleController.text.trim(),
-                reminderDateTime: _dateTime.toIso8601String(),
-                categoryId: _selectedCategoryId != null ? Value(_selectedCategoryId!) : const Value.absent(),
-              ));
+              ref.read(reminderNotifierProvider).addReminder(
+                RemindersCompanion.insert(
+                  title: _titleController.text.trim(),
+                  reminderDateTime: _dateTime.toIso8601String(),
+                  categoryId: _selectedCategoryId != null ? Value(_selectedCategoryId!) : const Value.absent(),
+                ),
+                notificationBody: l10n.reminderNotification(_titleController.text.trim()),
+              );
               Navigator.pop(context);
             },
-            child: const Text('新增'),
+            child: Text(l10n.add),
           ),
           const SizedBox(height: 16),
         ],

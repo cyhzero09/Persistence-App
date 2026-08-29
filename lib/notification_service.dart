@@ -26,6 +26,8 @@ class NotificationService {
     required String title,
     required String body,
     required DateTime scheduledDate,
+    String channelName = 'Reminders',
+    String channelDescription = 'Daily check-in reminders',
   }) async {
     if (!_initialized) await init();
     if (kIsWeb) return;
@@ -35,8 +37,8 @@ class NotificationService {
 
     final androidDetails = AndroidNotificationDetails(
       'reminder_channel',
-      '提醒通知',
-      channelDescription: '打卡提醒通知',
+      channelName,
+      channelDescription: channelDescription,
       importance: Importance.high,
       priority: Priority.high,
     );

@@ -1,0 +1,207 @@
+{
+  "@@locale": "zh_TW",
+  "appTitle": "日常追蹤",
+  "navHome": "首頁",
+  "navContent": "內容",
+  "navSettings": "設定",
+  "tabCheckIn": "打卡",
+  "tabDiary": "日記",
+  "tabReminder": "提醒",
+  "homeEmptyCheckIn": "請先在「內容」頁新增打卡項目",
+  "homeNoDiary": "此日無日記",
+  "homeNoReminder": "此日無提醒",
+  "addCheckInItem": "新增打卡項目",
+  "editCheckInItem": "編輯打卡項目",
+  "name": "名稱",
+  "descriptionOptional": "簡介（可選）",
+  "descriptionHint": "例如：每天跑30分鐘",
+  "chooseIcon": "選擇圖示：{emoji}",
+  "@chooseIcon": {
+    "placeholders": {
+      "emoji": { "type": "String" }
+    }
+  },
+  "startTimeValue": "開始 {time}",
+  "@startTimeValue": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "endTimeValue": "結束 {time}",
+  "@endTimeValue": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "startTimeLabel": "開始時間",
+  "endTimeLabel": "結束時間",
+  "repeatDays": "重複天數：",
+  "addReminder": "新增提醒",
+  "setTime": "設定時間",
+  "cancel": "取消",
+  "add": "新增",
+  "save": "儲存",
+  "editReminder": "編輯提醒",
+  "title": "標題",
+  "singleDay": "單天",
+  "multiDay": "多天",
+  "startLabel": "開始：{date}",
+  "@startLabel": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "endLabel": "結束：{date}",
+  "@endLabel": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "endDateOptional": "結束日期（可選）",
+  "reminderHint": "提示：結束留空 = 持續有效",
+  "repeat": "重複：",
+  "repeatWeekly": "每週 {days}",
+  "@repeatWeekly": {
+    "placeholders": {
+      "days": { "type": "String" }
+    }
+  },
+  "untilDate": "至 {date}",
+  "@untilDate": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "forever": "至永遠",
+  "listSeparator": "、",
+  "contentTitle": "內容",
+  "checkInItemsTab": "打卡項目",
+  "noCheckInItems": "尚無打卡項目",
+  "defaultLabel": "預設",
+  "noDiary": "尚無日記",
+  "noReminders": "尚無提醒",
+  "settings": "設定",
+  "appearance": "外觀",
+  "themeColor": "主題顏色",
+  "colorTeal": "青色",
+  "colorBlue": "藍色",
+  "colorGreen": "綠色",
+  "colorOrange": "橙色",
+  "colorPurple": "紫色",
+  "colorRed": "紅色",
+  "colorDeepPurple": "深紫色",
+  "colorDarkTeal": "深青色",
+  "colorAmber": "琥珀色",
+  "colorIndigo": "靛藍色",
+  "darkMode": "深色模式",
+  "whiteMode": "白色",
+  "blackMode": "黑色",
+  "followSystem": "跟隨系統",
+  "fontSize": "字體大小",
+  "language": "語言",
+  "english": "英文",
+  "simplifiedChinese": "簡體中文",
+  "traditionalChinese": "繁體中文",
+  "dataManagement": "資料管理",
+  "exportBackup": "匯出備份",
+  "importBackup": "匯入備份",
+  "update": "更新",
+  "checkUpdate": "檢查更新",
+  "account": "帳號",
+  "loginGoogle": "登入 Google 帳號",
+  "comingSoon": "即將推出",
+  "versionText": "版本 {version}",
+  "@versionText": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "chooseThemeColor": "選擇主題顏色",
+  "exportedTo": "已匯出到 {path}",
+  "@exportedTo": {
+    "placeholders": {
+      "path": { "type": "String" }
+    }
+  },
+  "exportFailed": "匯出失敗：{error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "newVersionFound": "發現新版本",
+  "versionInfo": "目前版本：{current}\n最新版本：{latest}",
+  "@versionInfo": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "latest": { "type": "String" }
+    }
+  },
+  "close": "關閉",
+  "downloadFromGitHub": "請至 GitHub Releases 下載新版本",
+  "goDownload": "前往下載",
+  "upToDate": "目前為最新版本",
+  "backupNotFound": "找不到備份檔案",
+  "importComplete": "匯入完成",
+  "importFailed": "匯入失敗：{error}",
+  "@importFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "updateErrorFetch": "無法獲取版本資訊 ({status})",
+  "@updateErrorFetch": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "updateErrorEmpty": "版本資訊為空",
+  "updateErrorCheck": "檢查更新失敗：{error}",
+  "@updateErrorCheck": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "unknown": "未知",
+  "diaryEntry": "日記",
+  "timeline": "時間軸",
+  "noRecords": "尚無紀錄",
+  "diary": "日記",
+  "editDiary": "編輯日記",
+  "writeDiary": "寫日記",
+  "dateRequired": "日期 *",
+  "titleOptional": "標題（可選）",
+  "diaryContentHint": "今天發生了什麼事...",
+  "reminders": "提醒",
+  "bindCheckInOptional": "綁定打卡項目（可選）",
+  "noBinding": "不綁定",
+  "noCheckInRecord": "此日無打卡紀錄",
+  "noteLabel": "備註：{note}",
+  "@noteLabel": {
+    "placeholders": {
+      "note": { "type": "String" }
+    }
+  },
+  "checkedIn": "已打卡",
+  "addCheckInFor": "新增打卡 - {date}",
+  "@addCheckInFor": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "checkInItem": "打卡項目",
+  "note": "備註",
+  "noteHint": "今天狀態如何？",
+  "addCheckIn": "新增打卡",
+  "addDiary": "新增日記",
+  "contentLabel": "內容",
+  "reminderNotification": "提醒：{title}",
+  "@reminderNotification": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "welcomeTitle": "歡迎使用",
+  "welcomeMessage": "請選擇您偏好的語言",
+  "continueButton": "繼續"
+}

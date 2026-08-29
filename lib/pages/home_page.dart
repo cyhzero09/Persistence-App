@@ -19,6 +19,8 @@ import '../models/reminder.dart';
 import 'diary_detail_page.dart';
 import 'diary_edit_page.dart';
 import 'category_detail_page.dart';
+import '../l10n/generated/app_localizations.dart';
+import '../l10n/locale_helpers.dart';
 
 const _emojis = [
   '🏃','📚','💧','🧘','💪','🎵','✍','🍎','☕','🎮','📝','🛌','🎯','🌈',
@@ -62,6 +64,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final categoriesAsync = ref.watch(categoriesProvider);
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
     final recordsAsync = ref.watch(checkInRecordsForDateProvider(dateStr));
@@ -80,7 +83,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(DateFormat('M 月 d 日 EEEE', 'zh-TW').format(_selectedDate)),
+        title: Text(homeDateTitle(context, _selectedDate)),
         actions: [
           IconButton(
             icon: Icon(_expanded ? Icons.unfold_less : Icons.unfold_more),
@@ -98,10 +101,10 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
           const Divider(height: 1),
           TabBar(
             controller: _tabController,
-            tabs: const [
-              Tab(text: '打卡'),
-              Tab(text: '日記'),
-              Tab(text: '提醒'),
+            tabs: [
+              Tab(text: l10n.tabCheckIn),
+              Tab(text: l10n.tabDiary),
+              Tab(text: l10n.tabReminder),
             ],
           ),
           Expanded(
@@ -138,7 +141,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       data: (categories) => recordsAsync.when(
         data: (records) {
           if (categories.isEmpty) {
-            return const Center(child: Text('請先在「內容」頁新增打卡項目'));
+            return Center(child: Text(AppLocalizations.of(context).homeEmptyCheckIn));
           }
           return ListView(
             children: categories.map((cat) {
@@ -170,13 +173,13 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     return diaryAsync.when(
       data: (entries) {
         final dayEntries = entries.where((e) => e.date.startsWith(dateStr)).toList();
-        if (dayEntries.isEmpty) return const Center(child: Text('此日無日記'));
+        if (dayEntries.isEmpty) return Center(child: Text(AppLocalizations.of(context).homeNoDiary));
         return ListView(
           children: dayEntries.map((e) {
             final dt = DateTime.parse(e.date);
             return ListTile(
               title: Text(e.title ?? e.content.split('\n').first, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text('${DateFormat('HH:mm', 'zh-TW').format(dt)}  ${e.content.split('\n').first}',
+              subtitle: Text('${DateFormat('HH:mm', intlLocaleOf(context)).format(dt)}  ${e.content.split('\n').first}',
                 maxLines: 1, overflow: TextOverflow.ellipsis),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -210,7 +213,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
           final dt = DateTime.parse(r.dateTime);
           return DateFormat('yyyy-MM-dd').format(dt) == dateStr;
         }).toList();
-        if (dayReminders.isEmpty) return const Center(child: Text('此日無提醒'));
+        if (dayReminders.isEmpty) return Center(child: Text(AppLocalizations.of(context).homeNoReminder));
         return ListView(
           children: dayReminders.map((r) {
             final dt = DateTime.parse(r.dateTime);
@@ -222,7 +225,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
               title: Text(r.title, style: TextStyle(
                 decoration: r.isCompleted ? TextDecoration.lineThrough : null,
               )),
-              subtitle: Text(DateFormat('HH:mm', 'zh-TW').format(dt)),
+              subtitle: Text(DateFormat('HH:mm', intlLocaleOf(context)).format(dt)),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -272,7 +275,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
           final dateOnly = DateTime(day.year, day.month, day.day);
           return markedDates.contains(dateOnly) ? [true] : [];
         },
-        locale: 'zh-TW',
+        locale: intlLocaleOf(context),
         headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
       );
     }
@@ -287,7 +290,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
           child: Row(
             children: List.generate(7, (i) => Expanded(
               child: Center(
-                child: Text(['日','一','二','三','四','五','六'][i],
+                child: Text(calendarWeekdayLabels(context)[i],
                   style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ),
@@ -420,6 +423,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
   }
 
   void _showAddCategoryDialog() {
+    final l10n = AppLocalizations.of(context);
     final nameController = TextEditingController();
     final descController = TextEditingController();
     String emoji = '📌';
@@ -435,23 +439,23 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('新增打卡項目'),
+          title: Text(l10n.addCheckInItem),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: '名稱', border: OutlineInputBorder()),
+                  decoration: InputDecoration(labelText: l10n.name, border: const OutlineInputBorder()),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: descController,
                   maxLines: 2,
-                  decoration: const InputDecoration(labelText: '簡介（可選）', border: OutlineInputBorder(), hintText: '例如：每天跑30分鐘'),
+                  decoration: InputDecoration(labelText: l10n.descriptionOptional, border: const OutlineInputBorder(), hintText: l10n.descriptionHint),
                 ),
                 const SizedBox(height: 12),
-                Text('選擇圖示：$emoji', style: const TextStyle(fontSize: 18)),
+                Text(l10n.chooseIcon(emoji), style: const TextStyle(fontSize: 18)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -497,7 +501,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 const SizedBox(height: 12),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(catStartTime != null ? '⏰ 開始 ${catStartTime!.format(context)}' : '⏰ 開始時間'),
+                  title: Text(catStartTime != null ? '⏰ ${l10n.startTimeValue(catStartTime!.format(context))}' : '⏰ ${l10n.startTimeLabel}'),
                   trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
                     final t = await showTimePicker(context: context, initialTime: catStartTime ?? TimeOfDay.now());
                     if (t != null) setDialogState(() => catStartTime = t);
@@ -505,19 +509,19 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(catEndTime != null ? '⏰ 結束 ${catEndTime!.format(context)}' : '⏰ 結束時間'),
+                  title: Text(catEndTime != null ? '⏰ ${l10n.endTimeValue(catEndTime!.format(context))}' : '⏰ ${l10n.endTimeLabel}'),
                   trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
                     final t = await showTimePicker(context: context, initialTime: catEndTime ?? TimeOfDay.now());
                     if (t != null) setDialogState(() => catEndTime = t);
                   }),
                 ),
                 const SizedBox(height: 8),
-                Text('重複天數：', style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                Text(l10n.repeatDays, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 const SizedBox(height: 4),
                 Wrap(
                   spacing: 4,
                   children: List.generate(7, (i) => FilterChip(
-                    label: Text(['一','二','三','四','五','六','日'][i]),
+                    label: Text(chipWeekdayLabels(context)[i]),
                     selected: catWeekdays.contains(i),
                     onSelected: (v) {
                       setDialogState(() {
@@ -530,7 +534,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 const Divider(),
                 Row(
                   children: [
-                    const Text('新增提醒'),
+                    Text(l10n.addReminder),
                     Switch(
                       value: addReminder,
                       onChanged: (v) => setDialogState(() => addReminder = v),
@@ -541,7 +545,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Text('設定時間'),
+                      Text(l10n.setTime),
                       Switch(
                         value: reminderTime != null,
                         onChanged: (v) => setDialogState(() {
@@ -565,7 +569,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
             FilledButton(
               onPressed: nameController.text.trim().isEmpty || catStartTime == null || catEndTime == null || catWeekdays.isEmpty
                   ? null : () async {
@@ -592,7 +596,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                     await NotificationService().scheduleReminder(
                       id: id,
                       title: nameController.text.trim(),
-                      body: '提醒：${nameController.text.trim()}',
+                      body: l10n.reminderNotification(nameController.text.trim()),
                       scheduledDate: reminderDt,
                     );
                   }
@@ -602,7 +606,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 if (!ctx.mounted) return;
                 Navigator.pop(ctx);
               },
-              child: const Text('新增'),
+              child: Text(l10n.add),
             ),
           ],
         ),
@@ -611,6 +615,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
   }
 
   void _showEditCategoryDialog(CheckInCategory category) {
+    final l10n = AppLocalizations.of(context);
     final nameController = TextEditingController(text: category.name);
     final descController = TextEditingController(text: category.description ?? '');
     String emoji = category.emoji;
@@ -635,23 +640,23 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('編輯打卡項目'),
+          title: Text(l10n.editCheckInItem),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: '名稱', border: OutlineInputBorder()),
+                  decoration: InputDecoration(labelText: l10n.name, border: const OutlineInputBorder()),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: descController,
                   maxLines: 2,
-                  decoration: const InputDecoration(labelText: '簡介（可選）', border: OutlineInputBorder()),
+                  decoration: InputDecoration(labelText: l10n.descriptionOptional, border: const OutlineInputBorder()),
                 ),
                 const SizedBox(height: 12),
-                Text('選擇圖示：$emoji', style: const TextStyle(fontSize: 18)),
+                Text(l10n.chooseIcon(emoji), style: const TextStyle(fontSize: 18)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -697,7 +702,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 const SizedBox(height: 12),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(editStartTime != null ? '⏰ 開始 ${editStartTime!.format(context)}' : '⏰ 開始時間'),
+                  title: Text(editStartTime != null ? '⏰ ${l10n.startTimeValue(editStartTime!.format(context))}' : '⏰ ${l10n.startTimeLabel}'),
                   trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
                     final t = await showTimePicker(context: context, initialTime: editStartTime ?? TimeOfDay.now());
                     if (t != null) setDialogState(() => editStartTime = t);
@@ -705,19 +710,19 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(editEndTime != null ? '⏰ 結束 ${editEndTime!.format(context)}' : '⏰ 結束時間'),
+                  title: Text(editEndTime != null ? '⏰ ${l10n.endTimeValue(editEndTime!.format(context))}' : '⏰ ${l10n.endTimeLabel}'),
                   trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
                     final t = await showTimePicker(context: context, initialTime: editEndTime ?? TimeOfDay.now());
                     if (t != null) setDialogState(() => editEndTime = t);
                   }),
                 ),
                 const SizedBox(height: 8),
-                Text('重複天數：', style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                Text(l10n.repeatDays, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 const SizedBox(height: 4),
                 Wrap(
                   spacing: 4,
                   children: List.generate(7, (i) => FilterChip(
-                    label: Text(['一','二','三','四','五','六','日'][i]),
+                    label: Text(chipWeekdayLabels(context)[i]),
                     selected: editWeekdays.contains(i),
                     onSelected: (v) {
                       setDialogState(() {
@@ -730,7 +735,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
             FilledButton(
               onPressed: nameController.text.trim().isEmpty || editStartTime == null || editEndTime == null || editWeekdays.isEmpty
                   ? null : () async {
@@ -749,7 +754,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 if (!ctx.mounted) return;
                 Navigator.pop(ctx);
               },
-              child: const Text('儲存'),
+              child: Text(l10n.save),
             ),
           ],
         ),
@@ -814,8 +819,6 @@ class _EditReminderSheetState extends ConsumerState<_EditReminderSheet> {
   final _selectedWeekdays = <int>{};
   DateTime? _reminderEndDate;
 
-  static const _weekdayLabels = ['一', '二', '三', '四', '五', '六', '日'];
-
   @override
   void initState() {
     super.initState();
@@ -841,6 +844,7 @@ class _EditReminderSheetState extends ConsumerState<_EditReminderSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -851,18 +855,18 @@ class _EditReminderSheetState extends ConsumerState<_EditReminderSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('編輯提醒',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(l10n.editReminder,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           TextField(
             controller: _titleController,
-            decoration: const InputDecoration(labelText: '標題', border: OutlineInputBorder()),
+            decoration: InputDecoration(labelText: l10n.title, border: const OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
           SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(value: false, label: Text('單天')),
-              ButtonSegment(value: true, label: Text('多天')),
+            segments: [
+              ButtonSegment(value: false, label: Text(l10n.singleDay)),
+              ButtonSegment(value: true, label: Text(l10n.multiDay)),
             ],
             selected: {_isMultiDay},
             onSelectionChanged: (v) => setState(() => _isMultiDay = v.first),
@@ -871,8 +875,8 @@ class _EditReminderSheetState extends ConsumerState<_EditReminderSheet> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(_isMultiDay
-                ? '開始：${DateFormat('yyyy/M/d', 'zh-TW').format(_reminderDate)}'
-                : DateFormat('yyyy/M/d', 'zh-TW').format(_reminderDate)),
+                ? l10n.startLabel(DateFormat('yyyy/M/d', intlLocaleOf(context)).format(_reminderDate))
+                : DateFormat('yyyy/M/d', intlLocaleOf(context)).format(_reminderDate)),
             leading: const Icon(Icons.calendar_today),
             onTap: () async {
               final dt = await showDatePicker(
@@ -886,7 +890,7 @@ class _EditReminderSheetState extends ConsumerState<_EditReminderSheet> {
           ),
           Row(
             children: [
-              const Text('設定時間'),
+              Text(l10n.setTime),
               Switch(
                 value: _reminderTime != null,
                 onChanged: (v) => setState(() => _reminderTime = v ? TimeOfDay.now() : null),
@@ -905,12 +909,12 @@ class _EditReminderSheetState extends ConsumerState<_EditReminderSheet> {
             ),
           if (_isMultiDay) ...[
             const SizedBox(height: 8),
-            Text('重複：', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Text(l10n.repeat, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 4),
             Wrap(
               spacing: 6,
               children: List.generate(7, (i) => FilterChip(
-                label: Text(_weekdayLabels[i]),
+                label: Text(chipWeekdayLabels(context)[i]),
                 selected: _selectedWeekdays.contains(i),
                 onSelected: (v) {
                   setState(() {
@@ -923,8 +927,8 @@ class _EditReminderSheetState extends ConsumerState<_EditReminderSheet> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(_reminderEndDate != null
-                  ? '結束：${DateFormat('yyyy/M/d', 'zh-TW').format(_reminderEndDate!)}'
-                  : '結束日期（可選）'),
+                  ? l10n.endLabel(DateFormat('yyyy/M/d', intlLocaleOf(context)).format(_reminderEndDate!))
+                  : l10n.endDateOptional),
               trailing: _reminderEndDate != null
                   ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _reminderEndDate = null))
                   : null,
@@ -939,7 +943,7 @@ class _EditReminderSheetState extends ConsumerState<_EditReminderSheet> {
                 if (dt != null) setState(() => _reminderEndDate = dt);
               },
             ),
-            const Text('提示：結束留空 = 持續有效', style: TextStyle(fontSize: 12)),
+            Text(l10n.reminderHint, style: const TextStyle(fontSize: 12)),
           ],
           const SizedBox(height: 16),
           FilledButton(
@@ -963,14 +967,14 @@ class _EditReminderSheetState extends ConsumerState<_EditReminderSheet> {
                 await NotificationService().scheduleReminder(
                   id: widget.reminder.id,
                   title: _titleController.text.trim(),
-                  body: '提醒：${_titleController.text.trim()}',
+                  body: l10n.reminderNotification(_titleController.text.trim()),
                   scheduledDate: reminderDt,
                 );
               }
               ref.invalidate(remindersProvider);
               if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
             },
-            child: const Text('儲存'),
+            child: Text(l10n.save),
           ),
           const SizedBox(height: 16),
         ],

@@ -45,10 +45,10 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> _seedDefaultCategories() async {
     final defaults = [
-      ('運動', '🏃'),
-      ('閱讀', '📚'),
-      ('喝水', '💧'),
-      ('冥想', '🧘'),
+      ('Exercise', '🏃'),
+      ('Reading', '📚'),
+      ('Water', '💧'),
+      ('Meditation', '🧘'),
     ];
     for (final (name, emoji) in defaults) {
       await into(checkInCategories).insert(CheckInCategoriesCompanion.insert(

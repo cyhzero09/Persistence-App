@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/check_in_category.dart';
 import '../models/check_in_record.dart';
+import '../l10n/generated/app_localizations.dart';
+import '../l10n/locale_helpers.dart';
 
 class CheckInTile extends StatelessWidget {
   final CheckInCategory category;
@@ -10,8 +12,6 @@ class CheckInTile extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
-
-  static const _weekdayLabels = ['一', '二', '三', '四', '五', '六', '日'];
 
   const CheckInTile({
     super.key,
@@ -26,13 +26,14 @@ class CheckInTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final subtitleParts = <String>[];
     if (category.startTime != null && category.endTime != null) {
       subtitleParts.add('${category.startTime}-${category.endTime}');
     }
     if (category.repeatWeekdays != null && category.repeatWeekdays!.isNotEmpty) {
-      final days = category.repeatWeekdays!.split(',').map((s) => _weekdayLabels[int.parse(s)]).join('');
-      subtitleParts.add('每週 $days');
+      final days = category.repeatWeekdays!.split(',').map((s) => chipWeekdayLabels(context)[int.parse(s)]).join('');
+      subtitleParts.add(l10n.repeatWeekly(days));
     }
     if (record?.isCompleted == true && record?.completedAt != null) {
       final parts = record!.completedAt!.split(' ');

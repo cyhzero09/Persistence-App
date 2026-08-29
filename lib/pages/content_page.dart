@@ -14,6 +14,8 @@ import '../models/reminder.dart';
 import 'diary_detail_page.dart';
 import 'diary_edit_page.dart';
 import 'category_detail_page.dart';
+import '../l10n/generated/app_localizations.dart';
+import '../l10n/locale_helpers.dart';
 
 const _emojis = [
   '🏃','📚','💧','🧘','💪','🎵','✍','🍎','☕','🎮','📝','🛌','🎯','🌈',
@@ -25,16 +27,17 @@ class ContentPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('內容'),
-          bottom: const TabBar(
+          title: Text(l10n.contentTitle),
+          bottom: TabBar(
             tabs: [
-              Tab(text: '打卡項目'),
-              Tab(text: '日記'),
-              Tab(text: '提醒'),
+              Tab(text: l10n.checkInItemsTab),
+              Tab(text: l10n.tabDiary),
+              Tab(text: l10n.tabReminder),
             ],
           ),
         ),
@@ -63,7 +66,7 @@ class _CategoriesTab extends ConsumerWidget {
       ),
       body: categoriesAsync.when(
         data: (cats) => cats.isEmpty
-            ? const Center(child: Text('尚無打卡項目'))
+            ? Center(child: Text(AppLocalizations.of(context).noCheckInItems))
             : ListView.builder(
                 itemCount: cats.length,
                 itemBuilder: (_, i) {
@@ -79,7 +82,7 @@ class _CategoriesTab extends ConsumerWidget {
                       children: [
                         if (cat.description != null && cat.description!.isNotEmpty)
                           Text(cat.description!, style: const TextStyle(fontSize: 13)),
-                        if (cat.isDefault) const Text('預設', style: TextStyle(fontSize: 12)),
+                        if (cat.isDefault) Text(AppLocalizations.of(context).defaultLabel, style: const TextStyle(fontSize: 12)),
                       ],
                     ),
                     trailing: Row(
@@ -113,6 +116,7 @@ class _CategoriesTab extends ConsumerWidget {
   }
 
   void _showAddCategoryDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final nameController = TextEditingController();
     final descController = TextEditingController();
     String emoji = '📌';
@@ -128,23 +132,23 @@ class _CategoriesTab extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('新增打卡項目'),
+          title: Text(l10n.addCheckInItem),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: '名稱', border: OutlineInputBorder()),
+                  decoration: InputDecoration(labelText: l10n.name, border: const OutlineInputBorder()),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: descController,
                   maxLines: 2,
-                  decoration: const InputDecoration(labelText: '簡介（可選）', border: OutlineInputBorder(), hintText: '例如：每天跑30分鐘'),
+                  decoration: InputDecoration(labelText: l10n.descriptionOptional, border: const OutlineInputBorder(), hintText: l10n.descriptionHint),
                 ),
                 const SizedBox(height: 12),
-                Text('選擇圖示：$emoji', style: const TextStyle(fontSize: 18)),
+                Text(l10n.chooseIcon(emoji), style: const TextStyle(fontSize: 18)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -190,7 +194,7 @@ class _CategoriesTab extends ConsumerWidget {
                 const SizedBox(height: 12),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(catStartTime != null ? '⏰ 開始 ${catStartTime!.format(context)}' : '⏰ 開始時間'),
+                  title: Text(catStartTime != null ? '⏰ ${l10n.startTimeValue(catStartTime!.format(context))}' : '⏰ ${l10n.startTimeLabel}'),
                   trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
                     final t = await showTimePicker(context: context, initialTime: catStartTime ?? TimeOfDay.now());
                     if (t != null) setDialogState(() => catStartTime = t);
@@ -198,19 +202,19 @@ class _CategoriesTab extends ConsumerWidget {
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(catEndTime != null ? '⏰ 結束 ${catEndTime!.format(context)}' : '⏰ 結束時間'),
+                  title: Text(catEndTime != null ? '⏰ ${l10n.endTimeValue(catEndTime!.format(context))}' : '⏰ ${l10n.endTimeLabel}'),
                   trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
                     final t = await showTimePicker(context: context, initialTime: catEndTime ?? TimeOfDay.now());
                     if (t != null) setDialogState(() => catEndTime = t);
                   }),
                 ),
                 const SizedBox(height: 8),
-                Text('重複天數：', style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                Text(l10n.repeatDays, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 const SizedBox(height: 4),
                 Wrap(
                   spacing: 4,
                   children: List.generate(7, (i) => FilterChip(
-                    label: Text(['一','二','三','四','五','六','日'][i]),
+                    label: Text(chipWeekdayLabels(context)[i]),
                     selected: catWeekdays.contains(i),
                     onSelected: (v) {
                       setDialogState(() {
@@ -223,7 +227,7 @@ class _CategoriesTab extends ConsumerWidget {
                 const Divider(),
                 Row(
                   children: [
-                    const Text('新增提醒'),
+                    Text(l10n.addReminder),
                     Switch(
                       value: addReminder,
                       onChanged: (v) => setDialogState(() => addReminder = v),
@@ -234,7 +238,7 @@ class _CategoriesTab extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Text('設定時間'),
+                      Text(l10n.setTime),
                       Switch(
                         value: reminderTime != null,
                         onChanged: (v) => setDialogState(() {
@@ -258,7 +262,7 @@ class _CategoriesTab extends ConsumerWidget {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
             FilledButton(
               onPressed: nameController.text.trim().isEmpty || catStartTime == null || catEndTime == null || catWeekdays.isEmpty
                   ? null : () async {
@@ -285,7 +289,7 @@ class _CategoriesTab extends ConsumerWidget {
                     await NotificationService().scheduleReminder(
                       id: id,
                       title: nameController.text.trim(),
-                      body: '提醒：${nameController.text.trim()}',
+                      body: l10n.reminderNotification(nameController.text.trim()),
                       scheduledDate: reminderDt,
                     );
                   }
@@ -295,7 +299,7 @@ class _CategoriesTab extends ConsumerWidget {
                 if (!ctx.mounted) return;
                 Navigator.pop(ctx);
               },
-              child: const Text('新增'),
+              child: Text(l10n.add),
             ),
           ],
         ),
@@ -304,6 +308,7 @@ class _CategoriesTab extends ConsumerWidget {
   }
 
   void _showEditCategoryDialog(BuildContext context, WidgetRef ref, CheckInCategory category) {
+    final l10n = AppLocalizations.of(context);
     final nameController = TextEditingController(text: category.name);
     final descController = TextEditingController(text: category.description ?? '');
     String emoji = category.emoji;
@@ -328,23 +333,23 @@ class _CategoriesTab extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('編輯打卡項目'),
+          title: Text(l10n.editCheckInItem),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: '名稱', border: OutlineInputBorder()),
+                  decoration: InputDecoration(labelText: l10n.name, border: const OutlineInputBorder()),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: descController,
                   maxLines: 2,
-                  decoration: const InputDecoration(labelText: '簡介（可選）', border: OutlineInputBorder()),
+                  decoration: InputDecoration(labelText: l10n.descriptionOptional, border: const OutlineInputBorder()),
                 ),
                 const SizedBox(height: 12),
-                Text('選擇圖示：$emoji', style: const TextStyle(fontSize: 18)),
+                Text(l10n.chooseIcon(emoji), style: const TextStyle(fontSize: 18)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -390,7 +395,7 @@ class _CategoriesTab extends ConsumerWidget {
                 const SizedBox(height: 12),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(editStartTime != null ? '⏰ 開始 ${editStartTime!.format(context)}' : '⏰ 開始時間'),
+                  title: Text(editStartTime != null ? '⏰ ${l10n.startTimeValue(editStartTime!.format(context))}' : '⏰ ${l10n.startTimeLabel}'),
                   trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
                     final t = await showTimePicker(context: context, initialTime: editStartTime ?? TimeOfDay.now());
                     if (t != null) setDialogState(() => editStartTime = t);
@@ -398,19 +403,19 @@ class _CategoriesTab extends ConsumerWidget {
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(editEndTime != null ? '⏰ 結束 ${editEndTime!.format(context)}' : '⏰ 結束時間'),
+                  title: Text(editEndTime != null ? '⏰ ${l10n.endTimeValue(editEndTime!.format(context))}' : '⏰ ${l10n.endTimeLabel}'),
                   trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
                     final t = await showTimePicker(context: context, initialTime: editEndTime ?? TimeOfDay.now());
                     if (t != null) setDialogState(() => editEndTime = t);
                   }),
                 ),
                 const SizedBox(height: 8),
-                Text('重複天數：', style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                Text(l10n.repeatDays, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 const SizedBox(height: 4),
                 Wrap(
                   spacing: 4,
                   children: List.generate(7, (i) => FilterChip(
-                    label: Text(['一','二','三','四','五','六','日'][i]),
+                    label: Text(chipWeekdayLabels(context)[i]),
                     selected: editWeekdays.contains(i),
                     onSelected: (v) {
                       setDialogState(() {
@@ -423,7 +428,7 @@ class _CategoriesTab extends ConsumerWidget {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
             FilledButton(
               onPressed: nameController.text.trim().isEmpty || editStartTime == null || editEndTime == null || editWeekdays.isEmpty
                   ? null : () async {
@@ -442,7 +447,7 @@ class _CategoriesTab extends ConsumerWidget {
                 if (!ctx.mounted) return;
                 Navigator.pop(ctx);
               },
-              child: const Text('儲存'),
+              child: Text(l10n.save),
             ),
           ],
         ),
@@ -460,7 +465,7 @@ class _DiaryTab extends ConsumerWidget {
     return Scaffold(
       body: diaryAsync.when(
         data: (entries) => entries.isEmpty
-            ? const Center(child: Text('尚無日記'))
+            ? Center(child: Text(AppLocalizations.of(context).noDiary))
             : ListView.builder(
                 itemCount: entries.length,
                 itemBuilder: (_, i) {
@@ -472,7 +477,7 @@ class _DiaryTab extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    subtitle: Text(DateFormat('yyyy/M/d HH:mm', 'zh-TW').format(dt)),
+                    subtitle: Text(DateFormat('yyyy/M/d HH:mm', intlLocaleOf(context)).format(dt)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -528,7 +533,7 @@ class _RemindersTab extends ConsumerWidget {
     return Scaffold(
       body: remindersAsync.when(
         data: (reminders) => reminders.isEmpty
-            ? const Center(child: Text('尚無提醒'))
+            ? Center(child: Text(AppLocalizations.of(context).noReminders))
             : ListView.builder(
                 itemCount: reminders.length,
                 itemBuilder: (_, i) => Dismissible(
@@ -562,6 +567,7 @@ class _ReminderTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final dt = DateTime.parse(reminder.dateTime);
     return ListTile(
       title: Text(reminder.title, style: TextStyle(
@@ -570,14 +576,16 @@ class _ReminderTile extends ConsumerWidget {
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(DateFormat('M/d HH:mm', 'zh-TW').format(dt)),
+          Text(DateFormat('M/d HH:mm', intlLocaleOf(context)).format(dt)),
           if (reminder.isRepeating) ...[
-            Text('重複：每週 ${reminder.repeatWeekdays!.split(',').map((s) => ['一','二','三','四','五','六','日'][int.parse(s)]).join('、')}',
-              style: const TextStyle(fontSize: 12)),
+            Text(
+              '${l10n.repeat} ${l10n.repeatWeekly(reminder.repeatWeekdays!.split(',').map((s) => chipWeekdayLabels(context)[int.parse(s)]).join(listSeparatorOf(context)))}',
+              style: const TextStyle(fontSize: 12),
+            ),
             if (reminder.repeatEndDate != null)
-              Text('至 ${reminder.repeatEndDate}', style: const TextStyle(fontSize: 12))
+              Text(l10n.untilDate(reminder.repeatEndDate!), style: const TextStyle(fontSize: 12))
             else
-              const Text('至永遠', style: TextStyle(fontSize: 12)),
+              Text(l10n.forever, style: const TextStyle(fontSize: 12)),
           ],
         ],
       ),
@@ -625,8 +633,6 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
   final _selectedWeekdays = <int>{};
   DateTime? _reminderEndDate;
 
-  static const _weekdayLabels = ['一', '二', '三', '四', '五', '六', '日'];
-
   @override
   void initState() {
     super.initState();
@@ -656,6 +662,7 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -666,18 +673,18 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(widget.editReminder != null ? '編輯提醒' : '新增提醒',
+          Text(widget.editReminder != null ? l10n.editReminder : l10n.addReminder,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           TextField(
             controller: _titleController,
-            decoration: const InputDecoration(labelText: '標題', border: OutlineInputBorder()),
+            decoration: InputDecoration(labelText: l10n.title, border: const OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
           SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(value: false, label: Text('單天')),
-              ButtonSegment(value: true, label: Text('多天')),
+            segments: [
+              ButtonSegment(value: false, label: Text(l10n.singleDay)),
+              ButtonSegment(value: true, label: Text(l10n.multiDay)),
             ],
             selected: {_isMultiDay},
             onSelectionChanged: (v) => setState(() => _isMultiDay = v.first),
@@ -686,8 +693,8 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(_isMultiDay
-                ? '開始：${DateFormat('yyyy/M/d', 'zh-TW').format(_reminderDate)}'
-                : DateFormat('yyyy/M/d', 'zh-TW').format(_reminderDate)),
+                ? l10n.startLabel(DateFormat('yyyy/M/d', intlLocaleOf(context)).format(_reminderDate))
+                : DateFormat('yyyy/M/d', intlLocaleOf(context)).format(_reminderDate)),
             leading: const Icon(Icons.calendar_today),
             onTap: () async {
               final dt = await showDatePicker(
@@ -701,7 +708,7 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
           ),
           Row(
             children: [
-              const Text('設定時間'),
+              Text(l10n.setTime),
               Switch(
                 value: _reminderTime != null,
                 onChanged: (v) => setState(() => _reminderTime = v ? TimeOfDay.now() : null),
@@ -720,12 +727,12 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
             ),
           if (_isMultiDay) ...[
             const SizedBox(height: 8),
-            Text('重複：', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Text(l10n.repeat, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 4),
             Wrap(
               spacing: 6,
               children: List.generate(7, (i) => FilterChip(
-                label: Text(_weekdayLabels[i]),
+                label: Text(chipWeekdayLabels(context)[i]),
                 selected: _selectedWeekdays.contains(i),
                 onSelected: (v) {
                   setState(() {
@@ -738,8 +745,8 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(_reminderEndDate != null
-                  ? '結束：${DateFormat('yyyy/M/d', 'zh-TW').format(_reminderEndDate!)}'
-                  : '結束日期（可選）'),
+                  ? l10n.endLabel(DateFormat('yyyy/M/d', intlLocaleOf(context)).format(_reminderEndDate!))
+                  : l10n.endDateOptional),
               trailing: _reminderEndDate != null
                   ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _reminderEndDate = null))
                   : null,
@@ -754,7 +761,7 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
                 if (dt != null) setState(() => _reminderEndDate = dt);
               },
             ),
-            const Text('提示：結束留空 = 持續有效', style: TextStyle(fontSize: 12)),
+            Text(l10n.reminderHint, style: const TextStyle(fontSize: 12)),
           ],
           const SizedBox(height: 16),
           FilledButton(
@@ -779,7 +786,7 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
                   await NotificationService().scheduleReminder(
                     id: widget.editReminder!.id,
                     title: _titleController.text.trim(),
-                    body: '提醒：${_titleController.text.trim()}',
+                    body: l10n.reminderNotification(_titleController.text.trim()),
                     scheduledDate: reminderDt,
                   );
                 }
@@ -789,7 +796,7 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
                   await NotificationService().scheduleReminder(
                     id: id,
                     title: _titleController.text.trim(),
-                    body: '提醒：${_titleController.text.trim()}',
+                    body: l10n.reminderNotification(_titleController.text.trim()),
                     scheduledDate: reminderDt,
                   );
                 }
@@ -797,7 +804,7 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
               ref.invalidate(remindersProvider);
               Navigator.pop(context);
             },
-            child: Text(widget.editReminder != null ? '儲存' : '新增'),
+            child: Text(widget.editReminder != null ? l10n.save : l10n.add),
           ),
           const SizedBox(height: 16),
         ],

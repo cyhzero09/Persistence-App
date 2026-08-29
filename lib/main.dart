@@ -6,6 +6,8 @@ import 'notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('en');
+  await initializeDateFormatting('zh');
   await initializeDateFormatting('zh-TW');
   await NotificationService().init();
   runApp(const ProviderScope(child: DailyTrackerApp()));

@@ -1,0 +1,207 @@
+{
+  "@@locale": "zh",
+  "appTitle": "日常追踪",
+  "navHome": "首页",
+  "navContent": "内容",
+  "navSettings": "设置",
+  "tabCheckIn": "打卡",
+  "tabDiary": "日记",
+  "tabReminder": "提醒",
+  "homeEmptyCheckIn": "请先在「内容」页添加打卡项目",
+  "homeNoDiary": "此日无日记",
+  "homeNoReminder": "此日无提醒",
+  "addCheckInItem": "添加打卡项目",
+  "editCheckInItem": "编辑打卡项目",
+  "name": "名称",
+  "descriptionOptional": "简介（可选）",
+  "descriptionHint": "例如：每天跑30分钟",
+  "chooseIcon": "选择图标：{emoji}",
+  "@chooseIcon": {
+    "placeholders": {
+      "emoji": { "type": "String" }
+    }
+  },
+  "startTimeValue": "开始 {time}",
+  "@startTimeValue": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "endTimeValue": "结束 {time}",
+  "@endTimeValue": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "startTimeLabel": "开始时间",
+  "endTimeLabel": "结束时间",
+  "repeatDays": "重复天数：",
+  "addReminder": "添加提醒",
+  "setTime": "设置时间",
+  "cancel": "取消",
+  "add": "添加",
+  "save": "保存",
+  "editReminder": "编辑提醒",
+  "title": "标题",
+  "singleDay": "单天",
+  "multiDay": "多天",
+  "startLabel": "开始：{date}",
+  "@startLabel": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "endLabel": "结束：{date}",
+  "@endLabel": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "endDateOptional": "结束日期（可选）",
+  "reminderHint": "提示：结束留空 = 持续有效",
+  "repeat": "重复：",
+  "repeatWeekly": "每周 {days}",
+  "@repeatWeekly": {
+    "placeholders": {
+      "days": { "type": "String" }
+    }
+  },
+  "untilDate": "至 {date}",
+  "@untilDate": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "forever": "至永远",
+  "listSeparator": "、",
+  "contentTitle": "内容",
+  "checkInItemsTab": "打卡项目",
+  "noCheckInItems": "暂无打卡项目",
+  "defaultLabel": "默认",
+  "noDiary": "暂无日记",
+  "noReminders": "暂无提醒",
+  "settings": "设置",
+  "appearance": "外观",
+  "themeColor": "主题颜色",
+  "colorTeal": "青色",
+  "colorBlue": "蓝色",
+  "colorGreen": "绿色",
+  "colorOrange": "橙色",
+  "colorPurple": "紫色",
+  "colorRed": "红色",
+  "colorDeepPurple": "深紫色",
+  "colorDarkTeal": "深青色",
+  "colorAmber": "琥珀色",
+  "colorIndigo": "靛蓝色",
+  "darkMode": "深色模式",
+  "whiteMode": "浅色",
+  "blackMode": "深色",
+  "followSystem": "跟随系统",
+  "fontSize": "字体大小",
+  "language": "语言",
+  "english": "英文",
+  "simplifiedChinese": "简体中文",
+  "traditionalChinese": "繁体中文",
+  "dataManagement": "数据管理",
+  "exportBackup": "导出备份",
+  "importBackup": "导入备份",
+  "update": "更新",
+  "checkUpdate": "检查更新",
+  "account": "账号",
+  "loginGoogle": "登录 Google 账号",
+  "comingSoon": "即将推出",
+  "versionText": "版本 {version}",
+  "@versionText": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "chooseThemeColor": "选择主题颜色",
+  "exportedTo": "已导出到 {path}",
+  "@exportedTo": {
+    "placeholders": {
+      "path": { "type": "String" }
+    }
+  },
+  "exportFailed": "导出失败：{error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "newVersionFound": "发现新版本",
+  "versionInfo": "当前版本：{current}\n最新版本：{latest}",
+  "@versionInfo": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "latest": { "type": "String" }
+    }
+  },
+  "close": "关闭",
+  "downloadFromGitHub": "请前往 GitHub Releases 下载新版本",
+  "goDownload": "前往下载",
+  "upToDate": "当前为最新版本",
+  "backupNotFound": "找不到备份文件",
+  "importComplete": "导入完成",
+  "importFailed": "导入失败：{error}",
+  "@importFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "updateErrorFetch": "无法获取版本信息 ({status})",
+  "@updateErrorFetch": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "updateErrorEmpty": "版本信息为空",
+  "updateErrorCheck": "检查更新失败：{error}",
+  "@updateErrorCheck": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "unknown": "未知",
+  "diaryEntry": "日记",
+  "timeline": "时间轴",
+  "noRecords": "暂无记录",
+  "diary": "日记",
+  "editDiary": "编辑日记",
+  "writeDiary": "写日记",
+  "dateRequired": "日期 *",
+  "titleOptional": "标题（可选）",
+  "diaryContentHint": "今天发生了什么事...",
+  "reminders": "提醒",
+  "bindCheckInOptional": "绑定打卡项目（可选）",
+  "noBinding": "不绑定",
+  "noCheckInRecord": "此日无打卡记录",
+  "noteLabel": "备注：{note}",
+  "@noteLabel": {
+    "placeholders": {
+      "note": { "type": "String" }
+    }
+  },
+  "checkedIn": "已打卡",
+  "addCheckInFor": "添加打卡 - {date}",
+  "@addCheckInFor": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "checkInItem": "打卡项目",
+  "note": "备注",
+  "noteHint": "今天状态如何？",
+  "addCheckIn": "添加打卡",
+  "addDiary": "添加日记",
+  "contentLabel": "内容",
+  "reminderNotification": "提醒：{title}",
+  "@reminderNotification": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "welcomeTitle": "欢迎使用",
+  "welcomeMessage": "请选择您偏好的语言",
+  "continueButton": "继续"
+}

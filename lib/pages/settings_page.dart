@@ -16,55 +16,80 @@ import '../models/diary_entry.dart';
 import '../models/reminder.dart';
 import '../app_version.dart';
 import '../update_checker.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
   static const themeColors = [
-    (0xFF009688, 'Teal'),
-    (0xFF1976D2, 'Blue'),
-    (0xFF388E3C, 'Green'),
-    (0xFFE64A19, 'Orange'),
-    (0xFF7B1FA2, 'Purple'),
-    (0xFFD32F2F, 'Red'),
-    (0xFF512DA8, 'Deep Purple'),
-    (0xFF00796B, 'Dark Teal'),
-    (0xFFF57C00, 'Amber'),
-    (0xFF5C6BC0, 'Indigo'),
+    0xFF009688,
+    0xFF1976D2,
+    0xFF388E3C,
+    0xFFE64A19,
+    0xFF7B1FA2,
+    0xFFD32F2F,
+    0xFF512DA8,
+    0xFF00796B,
+    0xFFF57C00,
+    0xFF5C6BC0,
   ];
+
+  static String colorName(BuildContext context, int color) {
+    final l10n = AppLocalizations.of(context);
+    return switch (color) {
+      0xFF009688 => l10n.colorTeal,
+      0xFF1976D2 => l10n.colorBlue,
+      0xFF388E3C => l10n.colorGreen,
+      0xFFE64A19 => l10n.colorOrange,
+      0xFF7B1FA2 => l10n.colorPurple,
+      0xFFD32F2F => l10n.colorRed,
+      0xFF512DA8 => l10n.colorDeepPurple,
+      0xFF00796B => l10n.colorDarkTeal,
+      0xFFF57C00 => l10n.colorAmber,
+      0xFF5C6BC0 => l10n.colorIndigo,
+      _ => l10n.colorTeal,
+    };
+  }
+
+  static String languageName(String code) {
+    return switch (code) {
+      'en' => 'English',
+      'zh' => '简体中文',
+      _ => '繁體中文',
+    };
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(appSettingsProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('設定')),
+      appBar: AppBar(title: Text(l10n.settings)),
       body: ListView(
         children: [
-          const _SectionHeader(title: '外觀'),
+          const _SectionHeader(titleKey: 'appearance'),
           ListTile(
             leading: const Icon(Icons.palette),
-            title: const Text('主題顏色'),
-            subtitle: Text(
-              themeColors.firstWhere((c) => c.$1 == settings.themeColor, orElse: () => (0xFF009688, 'Teal')).$2,
-            ),
+            title: Text(l10n.themeColor),
+            subtitle: Text(colorName(context, settings.themeColor)),
             onTap: () => _showColorPicker(context, ref, settings.themeColor),
           ),
           ListTile(
             leading: const Icon(Icons.dark_mode),
-            title: const Text('深色模式'),
+            title: Text(l10n.darkMode),
             subtitle: Text(
               switch (settings.brightness) {
-                ThemeMode.light => '白色',
-                ThemeMode.dark => '黑色',
-                ThemeMode.system => '跟隨系統',
+                ThemeMode.light => l10n.whiteMode,
+                ThemeMode.dark => l10n.blackMode,
+                ThemeMode.system => l10n.followSystem,
               },
             ),
             onTap: () => _showBrightnessPicker(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.text_fields),
-            title: const Text('字體大小'),
+            title: Text(l10n.fontSize),
             subtitle: Text('${(settings.fontSize * 100).toInt()}%'),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -85,38 +110,46 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           const Divider(),
-          const _SectionHeader(title: '資料管理'),
+          const _SectionHeader(titleKey: 'language'),
+          ListTile(
+            leading: const Icon(Icons.language),
+            title: Text(l10n.language),
+            subtitle: Text(languageName(settings.language)),
+            onTap: () => _showLanguagePicker(context, ref),
+          ),
+          const Divider(),
+          const _SectionHeader(titleKey: 'dataManagement'),
           ListTile(
             leading: const Icon(Icons.file_download),
-            title: const Text('匯出備份'),
+            title: Text(l10n.exportBackup),
             onTap: () => _exportData(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.file_upload),
-            title: const Text('匯入備份'),
+            title: Text(l10n.importBackup),
             onTap: () => _importData(context, ref),
           ),
           const Divider(),
-          const _SectionHeader(title: '更新'),
+          const _SectionHeader(titleKey: 'update'),
           ListTile(
             leading: const Icon(Icons.system_update),
-            title: const Text('檢查更新'),
+            title: Text(l10n.checkUpdate),
             subtitle: const Text(appVersion),
             onTap: () => _checkUpdate(context),
           ),
           const Divider(),
-          const _SectionHeader(title: '帳號'),
-          const ListTile(
-            leading: Icon(Icons.login),
-            title: Text('登入 Google 帳號'),
-            subtitle: Text('即將推出'),
+          const _SectionHeader(titleKey: 'account'),
+          ListTile(
+            leading: const Icon(Icons.login),
+            title: Text(l10n.loginGoogle),
+            subtitle: Text(l10n.comingSoon),
             enabled: false,
           ),
           const Divider(),
           Center(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Text('版本 $appVersion',
+              child: Text(l10n.versionText(appVersion),
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
             ),
           ),
@@ -130,27 +163,27 @@ class SettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('選擇主題顏色'),
+        title: Text(AppLocalizations.of(ctx).chooseThemeColor),
         content: SizedBox(
           width: 280,
           child: Wrap(
             spacing: 12,
             runSpacing: 12,
             children: themeColors.map((c) {
-              final selected = c.$1 == currentColor;
+              final selected = c == currentColor;
               return GestureDetector(
                 onTap: () {
-                  ref.read(appSettingsProvider.notifier).setThemeColor(c.$1);
+                  ref.read(appSettingsProvider.notifier).setThemeColor(c);
                   Navigator.pop(ctx);
                 },
                 child: Container(
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Color(c.$1),
+                    color: Color(c),
                     borderRadius: BorderRadius.circular(12),
                     border: selected ? Border.all(color: Colors.white, width: 3) : null,
-                    boxShadow: selected ? [BoxShadow(color: Color(c.$1).withValues(alpha: 0.5), blurRadius: 8)] : null,
+                    boxShadow: selected ? [BoxShadow(color: Color(c).withValues(alpha: 0.5), blurRadius: 8)] : null,
                   ),
                   child: selected ? const Icon(Icons.check, color: Colors.white) : null,
                 ),
@@ -164,16 +197,17 @@ class SettingsPage extends ConsumerWidget {
 
   void _showBrightnessPicker(BuildContext context, WidgetRef ref) {
     final current = ref.read(appSettingsProvider).brightness;
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('深色模式'),
+        title: Text(l10n.darkMode),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.light_mode),
-              title: const Text('白色'),
+              title: Text(l10n.whiteMode),
               trailing: current == ThemeMode.light ? const Icon(Icons.check) : null,
               onTap: () {
                 ref.read(appSettingsProvider.notifier).setBrightness(ThemeMode.light);
@@ -182,7 +216,7 @@ class SettingsPage extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.dark_mode),
-              title: const Text('黑色'),
+              title: Text(l10n.blackMode),
               trailing: current == ThemeMode.dark ? const Icon(Icons.check) : null,
               onTap: () {
                 ref.read(appSettingsProvider.notifier).setBrightness(ThemeMode.dark);
@@ -191,7 +225,7 @@ class SettingsPage extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.brightness_auto),
-              title: const Text('跟隨系統'),
+              title: Text(l10n.followSystem),
               trailing: current == ThemeMode.system ? const Icon(Icons.check) : null,
               onTap: () {
                 ref.read(appSettingsProvider.notifier).setBrightness(ThemeMode.system);
@@ -204,7 +238,51 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
+  void _showLanguagePicker(BuildContext context, WidgetRef ref) {
+    final current = ref.read(appSettingsProvider).language;
+    final l10n = AppLocalizations.of(context);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.language),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.language),
+              title: const Text('English'),
+              trailing: current == 'en' ? const Icon(Icons.check) : null,
+              onTap: () {
+                ref.read(appSettingsProvider.notifier).setLanguage('en');
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.language),
+              title: const Text('简体中文'),
+              trailing: current == 'zh' ? const Icon(Icons.check) : null,
+              onTap: () {
+                ref.read(appSettingsProvider.notifier).setLanguage('zh');
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.language),
+              title: const Text('繁體中文'),
+              trailing: current == 'zh_TW' ? const Icon(Icons.check) : null,
+              onTap: () {
+                ref.read(appSettingsProvider.notifier).setLanguage('zh_TW');
+                Navigator.pop(ctx);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _exportData(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     try {
       final db = ref.read(databaseProvider);
       final cats = await db.select(db.checkInCategories).get();
@@ -227,60 +305,67 @@ class SettingsPage extends ConsumerWidget {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已匯出到 ${file.path}')),
+          SnackBar(content: Text(l10n.exportedTo(file.path))),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('匯出失敗：$e')),
+          SnackBar(content: Text(l10n.exportFailed('$e'))),
         );
       }
     }
   }
 
   Future<void> _checkUpdate(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final result = await checkForUpdates(appVersion);
     if (!context.mounted) return;
-    if (result.error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.error!)));
+    if (result.errorCode != null) {
+      final msg = switch (result.errorCode!) {
+        'fetch_failed' => l10n.updateErrorFetch('${result.statusCode}'),
+        'empty_version' => l10n.updateErrorEmpty,
+        _ => l10n.updateErrorCheck(result.errorDetail ?? ''),
+      };
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       return;
     }
     if (result.hasUpdate) {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('發現新版本'),
-          content: Text('目前版本：$appVersion\n最新版本：${result.latestVersion}'),
+          title: Text(l10n.newVersionFound),
+          content: Text(l10n.versionInfo(appVersion, result.latestVersion ?? '')),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('關閉')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.close)),
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('請至 GitHub Releases 下載新版本')),
+                  SnackBar(content: Text(l10n.downloadFromGitHub)),
                 );
               },
-              child: const Text('前往下載'),
+              child: Text(l10n.goDownload),
             ),
           ],
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('目前為最新版本')),
+        SnackBar(content: Text(l10n.upToDate)),
       );
     }
   }
 
   Future<void> _importData(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     try {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/daily_tracker_backup.json');
       if (!await file.exists()) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('找不到備份檔案')),
+          SnackBar(content: Text(l10n.backupNotFound)),
         );
         return;
       }
@@ -328,13 +413,13 @@ class SettingsPage extends ConsumerWidget {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('匯入完成')),
+          SnackBar(content: Text(l10n.importComplete)),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('匯入失敗：$e')),
+          SnackBar(content: Text(l10n.importFailed('$e'))),
         );
       }
     }
@@ -342,11 +427,19 @@ class SettingsPage extends ConsumerWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  final String title;
-  const _SectionHeader({required this.title});
+  final String titleKey;
+  const _SectionHeader({required this.titleKey});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final title = switch (titleKey) {
+      'appearance' => l10n.appearance,
+      'language' => l10n.language,
+      'dataManagement' => l10n.dataManagement,
+      'update' => l10n.update,
+      _ => l10n.account,
+    };
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       child: Text(title, style: TextStyle(

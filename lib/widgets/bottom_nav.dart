@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class BottomNav extends StatelessWidget {
   final int currentIndex;
@@ -12,13 +13,14 @@ class BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return NavigationBar(
       selectedIndex: currentIndex,
       onDestinationSelected: onTap,
-      destinations: const [
-        NavigationDestination(icon: Icon(Icons.today), label: '首頁'),
-        NavigationDestination(icon: Icon(Icons.dashboard), label: '內容'),
-        NavigationDestination(icon: Icon(Icons.settings), label: '設定'),
+      destinations: [
+        NavigationDestination(icon: const Icon(Icons.today), label: l10n.navHome),
+        NavigationDestination(icon: const Icon(Icons.dashboard), label: l10n.navContent),
+        NavigationDestination(icon: const Icon(Icons.settings), label: l10n.navSettings),
       ],
     );
   }

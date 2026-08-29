@@ -1,0 +1,207 @@
+{
+  "@@locale": "en",
+  "appTitle": "Daily Tracker",
+  "navHome": "Home",
+  "navContent": "Content",
+  "navSettings": "Settings",
+  "tabCheckIn": "Check-in",
+  "tabDiary": "Diary",
+  "tabReminder": "Reminder",
+  "homeEmptyCheckIn": "Please add check-in items in the \"Content\" page first.",
+  "homeNoDiary": "No diary for this day",
+  "homeNoReminder": "No reminders for this day",
+  "addCheckInItem": "Add Check-in Item",
+  "editCheckInItem": "Edit Check-in Item",
+  "name": "Name",
+  "descriptionOptional": "Description (optional)",
+  "descriptionHint": "e.g. Run 30 minutes every day",
+  "chooseIcon": "Choose icon: {emoji}",
+  "@chooseIcon": {
+    "placeholders": {
+      "emoji": { "type": "String" }
+    }
+  },
+  "startTimeValue": "Start {time}",
+  "@startTimeValue": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "endTimeValue": "End {time}",
+  "@endTimeValue": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "startTimeLabel": "Start time",
+  "endTimeLabel": "End time",
+  "repeatDays": "Repeat days:",
+  "addReminder": "Add Reminder",
+  "setTime": "Set time",
+  "cancel": "Cancel",
+  "add": "Add",
+  "save": "Save",
+  "editReminder": "Edit Reminder",
+  "title": "Title",
+  "singleDay": "Single day",
+  "multiDay": "Multiple days",
+  "startLabel": "Start: {date}",
+  "@startLabel": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "endLabel": "End: {date}",
+  "@endLabel": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "endDateOptional": "End date (optional)",
+  "reminderHint": "Tip: leave end date empty to repeat forever",
+  "repeat": "Repeat:",
+  "repeatWeekly": "Weekly {days}",
+  "@repeatWeekly": {
+    "placeholders": {
+      "days": { "type": "String" }
+    }
+  },
+  "untilDate": "Until {date}",
+  "@untilDate": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "forever": "Forever",
+  "listSeparator": ", ",
+  "contentTitle": "Content",
+  "checkInItemsTab": "Check-in items",
+  "noCheckInItems": "No check-in items yet",
+  "defaultLabel": "Default",
+  "noDiary": "No diary yet",
+  "noReminders": "No reminders yet",
+  "settings": "Settings",
+  "appearance": "Appearance",
+  "themeColor": "Theme color",
+  "colorTeal": "Teal",
+  "colorBlue": "Blue",
+  "colorGreen": "Green",
+  "colorOrange": "Orange",
+  "colorPurple": "Purple",
+  "colorRed": "Red",
+  "colorDeepPurple": "Deep Purple",
+  "colorDarkTeal": "Dark Teal",
+  "colorAmber": "Amber",
+  "colorIndigo": "Indigo",
+  "darkMode": "Dark mode",
+  "whiteMode": "Light",
+  "blackMode": "Dark",
+  "followSystem": "Follow system",
+  "fontSize": "Font size",
+  "language": "Language",
+  "english": "English",
+  "simplifiedChinese": "Simplified Chinese",
+  "traditionalChinese": "Traditional Chinese",
+  "dataManagement": "Data management",
+  "exportBackup": "Export backup",
+  "importBackup": "Import backup",
+  "update": "Update",
+  "checkUpdate": "Check for updates",
+  "account": "Account",
+  "loginGoogle": "Sign in with Google",
+  "comingSoon": "Coming soon",
+  "versionText": "Version {version}",
+  "@versionText": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "chooseThemeColor": "Choose theme color",
+  "exportedTo": "Exported to {path}",
+  "@exportedTo": {
+    "placeholders": {
+      "path": { "type": "String" }
+    }
+  },
+  "exportFailed": "Export failed: {error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "newVersionFound": "New version found",
+  "versionInfo": "Current version: {current}\nLatest version: {latest}",
+  "@versionInfo": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "latest": { "type": "String" }
+    }
+  },
+  "close": "Close",
+  "downloadFromGitHub": "Please download the new version from GitHub Releases",
+  "goDownload": "Go to download",
+  "upToDate": "You are up to date",
+  "backupNotFound": "Backup file not found",
+  "importComplete": "Import complete",
+  "importFailed": "Import failed: {error}",
+  "@importFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "updateErrorFetch": "Unable to fetch version info ({status})",
+  "@updateErrorFetch": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "updateErrorEmpty": "Version info is empty",
+  "updateErrorCheck": "Update check failed: {error}",
+  "@updateErrorCheck": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "unknown": "Unknown",
+  "diaryEntry": "Diary",
+  "timeline": "Timeline",
+  "noRecords": "No records yet",
+  "diary": "Diary",
+  "editDiary": "Edit Diary",
+  "writeDiary": "Write Diary",
+  "dateRequired": "Date *",
+  "titleOptional": "Title (optional)",
+  "diaryContentHint": "What happened today...",
+  "reminders": "Reminders",
+  "bindCheckInOptional": "Link check-in item (optional)",
+  "noBinding": "No link",
+  "noCheckInRecord": "No check-in record on this day",
+  "noteLabel": "Note: {note}",
+  "@noteLabel": {
+    "placeholders": {
+      "note": { "type": "String" }
+    }
+  },
+  "checkedIn": "Checked in",
+  "addCheckInFor": "Add check-in - {date}",
+  "@addCheckInFor": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "checkInItem": "Check-in item",
+  "note": "Note",
+  "noteHint": "How are you today?",
+  "addCheckIn": "Add Check-in",
+  "addDiary": "Add Diary",
+  "contentLabel": "Content",
+  "reminderNotification": "Reminder: {title}",
+  "@reminderNotification": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "welcomeTitle": "Welcome",
+  "welcomeMessage": "Choose your preferred language",
+  "continueButton": "Continue"
+}

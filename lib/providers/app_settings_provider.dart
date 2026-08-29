@@ -6,17 +6,33 @@ class AppSettings {
   final int themeColor;
   final double fontSize;
   final ThemeMode brightness;
+  final String language; // 'en' | 'zh' | 'zh_TW'
+  final bool languageChosen;
+  final bool initialized;
 
   const AppSettings({
     this.themeColor = 0xFF009688,
     this.fontSize = 1.0,
     this.brightness = ThemeMode.system,
+    this.language = 'en',
+    this.languageChosen = false,
+    this.initialized = false,
   });
 
-  AppSettings copyWith({int? themeColor, double? fontSize, ThemeMode? brightness}) => AppSettings(
+  AppSettings copyWith({
+    int? themeColor,
+    double? fontSize,
+    ThemeMode? brightness,
+    String? language,
+    bool? languageChosen,
+    bool? initialized,
+  }) => AppSettings(
     themeColor: themeColor ?? this.themeColor,
     fontSize: fontSize ?? this.fontSize,
     brightness: brightness ?? this.brightness,
+    language: language ?? this.language,
+    languageChosen: languageChosen ?? this.languageChosen,
+    initialized: initialized ?? this.initialized,
   );
 }
 
@@ -43,6 +59,9 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
       themeColor: prefs.getInt('themeColor') ?? 0xFF009688,
       fontSize: prefs.getDouble('fontSize') ?? 1.0,
       brightness: brightnessFromPref(prefs.getString('brightness')),
+      language: prefs.getString('language') ?? 'en',
+      languageChosen: prefs.getBool('languageChosen') ?? false,
+      initialized: true,
     );
   }
 
@@ -62,6 +81,18 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
     state = state.copyWith(brightness: mode);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('brightness', brightnessToPref(mode));
+  }
+
+  Future<void> setLanguage(String code) async {
+    state = state.copyWith(language: code);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('language', code);
+  }
+
+  Future<void> markLanguageChosen() async {
+    state = state.copyWith(languageChosen: true);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('languageChosen', true);
   }
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../l10n/locale_helpers.dart';
 
 class WeekCalendar extends StatelessWidget {
   final DateTime selectedDate;
@@ -91,7 +92,7 @@ class WeekCalendar extends StatelessWidget {
                   children: [
                     if (showFullMonth)
                       Text(
-                        DateFormat('E', 'zh-TW').format(day),
+                        DateFormat('E', intlLocaleOf(context)).format(day),
                         style: TextStyle(
                           fontSize: 11,
                           color: isToday ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,

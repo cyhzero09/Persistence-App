@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/diary_entry.dart';
+import '../l10n/locale_helpers.dart';
 
 class DiaryDetailPage extends StatelessWidget {
   final DiaryEntry entry;
@@ -11,7 +12,7 @@ class DiaryDetailPage extends StatelessWidget {
     final dt = DateTime.parse(entry.date);
     return Scaffold(
       appBar: AppBar(
-        title: Text(entry.title ?? DateFormat('yyyy/M/d HH:mm', 'zh-TW').format(dt)),
+        title: Text(entry.title ?? DateFormat('yyyy/M/d HH:mm', intlLocaleOf(context)).format(dt)),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -22,7 +23,7 @@ class DiaryDetailPage extends StatelessWidget {
               if (entry.title != null) ...[
                 Text(entry.title!, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                Text(DateFormat('yyyy/M/d HH:mm', 'zh-TW').format(dt),
+                Text(DateFormat('yyyy/M/d HH:mm', intlLocaleOf(context)).format(dt),
                   style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 const Divider(),
               ],

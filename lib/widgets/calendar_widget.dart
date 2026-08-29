@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import '../l10n/locale_helpers.dart';
 
 class CalendarWidget extends StatelessWidget {
   final DateTime selectedDate;
@@ -39,7 +40,7 @@ class CalendarWidget extends StatelessWidget {
         final dateOnly = DateTime(day.year, day.month, day.day);
         return markedDates.contains(dateOnly) ? [true] : [];
       },
-      locale: 'zh-TW',
+      locale: intlLocaleOf(context),
       headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
     );
   }

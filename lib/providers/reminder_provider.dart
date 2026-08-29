@@ -33,7 +33,7 @@ class ReminderNotifier {
   final Ref _ref;
   ReminderNotifier(this._ref);
 
-  Future<void> addReminder(RemindersCompanion companion) async {
+  Future<void> addReminder(RemindersCompanion companion, {String? notificationBody}) async {
     final db = _ref.read(databaseProvider);
     final id = await db.into(db.reminders).insert(companion);
     final reminderDateTime = companion.reminderDateTime.value;
@@ -43,7 +43,7 @@ class ReminderNotifier {
       await NotificationService().scheduleReminder(
         id: id,
         title: title,
-        body: '提醒：$title',
+        body: notificationBody ?? title,
         scheduledDate: dt,
       );
     }

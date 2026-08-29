@@ -6,6 +6,8 @@ import '../database/database.dart' hide DiaryEntry;
 import '../providers/database_provider.dart';
 import '../providers/diary_provider.dart';
 import '../models/diary_entry.dart';
+import '../l10n/generated/app_localizations.dart';
+import '../l10n/locale_helpers.dart';
 
 class DiaryEditPage extends ConsumerStatefulWidget {
   final DiaryEntry? entry;
@@ -45,15 +47,16 @@ class _DiaryEditPageState extends ConsumerState<DiaryEditPage> {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = DateFormat('yyyy/M/d', 'zh-TW').format(_diaryDate);
+    final l10n = AppLocalizations.of(context);
+    final dateStr = DateFormat('yyyy/M/d', intlLocaleOf(context)).format(_diaryDate);
     final isEditing = widget.entry != null;
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? '編輯日記' : '寫日記'),
+        title: Text(isEditing ? l10n.editDiary : l10n.writeDiary),
         actions: [
           TextButton(
             onPressed: _hasContent ? _save : null,
-            child: Text(isEditing ? '儲存' : '新增'),
+            child: Text(isEditing ? l10n.save : l10n.add),
           ),
         ],
       ),
@@ -64,10 +67,10 @@ class _DiaryEditPageState extends ConsumerState<DiaryEditPage> {
             TextField(
               readOnly: true,
               controller: TextEditingController(text: dateStr),
-              decoration: const InputDecoration(
-                labelText: '日期 *',
-                border: OutlineInputBorder(),
-                suffixIcon: Icon(Icons.calendar_today),
+              decoration: InputDecoration(
+                labelText: l10n.dateRequired,
+                border: const OutlineInputBorder(),
+                suffixIcon: const Icon(Icons.calendar_today),
               ),
               onTap: () async {
                 final dt = await showDatePicker(
@@ -82,9 +85,9 @@ class _DiaryEditPageState extends ConsumerState<DiaryEditPage> {
             const SizedBox(height: 12),
             TextField(
               controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: '標題（可選）',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.titleOptional,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -94,8 +97,8 @@ class _DiaryEditPageState extends ConsumerState<DiaryEditPage> {
                 maxLines: null,
                 expands: true,
                 textAlignVertical: TextAlignVertical.top,
-                decoration: const InputDecoration(
-                  hintText: '今天發生了什麼事...',
+                decoration: InputDecoration(
+                  hintText: l10n.diaryContentHint,
                   border: InputBorder.none,
                 ),
                 onChanged: (v) => setState(() => _hasContent = v.trim().isNotEmpty),

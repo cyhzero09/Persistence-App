@@ -7,6 +7,8 @@ import '../models/check_in_record.dart';
 import '../models/reminder.dart';
 import '../providers/check_in_provider.dart';
 import '../providers/reminder_provider.dart';
+import '../l10n/generated/app_localizations.dart';
+import '../l10n/locale_helpers.dart';
 
 class CategoryDetailPage extends ConsumerStatefulWidget {
   final CheckInCategory category;
@@ -70,6 +72,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
   }
 
   Widget _buildHeader(BuildContext context, List<Reminder> reminders) {
+    final l10n = AppLocalizations.of(context);
     final linkedReminder = reminders.where((r) => r.categoryId == widget.category.id).toList();
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -105,20 +108,20 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                 children: linkedReminder.map((r) {
                   final parts = <String>[];
                   if (r.isRepeating) {
-                    parts.add('每週 ${r.repeatWeekdays!.split(',').map((s) => ['一','二','三','四','五','六','日'][int.parse(s)]).join('、')}');
+                    parts.add(l10n.repeatWeekly(r.repeatWeekdays!.split(',').map((s) => chipWeekdayLabels(context)[int.parse(s)]).join(listSeparatorOf(context))));
                     if (r.repeatEndDate != null) {
-                      parts.add('至 ${r.repeatEndDate}');
+                      parts.add(l10n.untilDate(r.repeatEndDate!));
                     } else {
-                      parts.add('至永遠');
+                      parts.add(l10n.forever);
                     }
                   } else {
-                    parts.add(DateFormat('yyyy/M/d HH:mm', 'zh-TW').format(DateTime.parse(r.dateTime)));
+                    parts.add(DateFormat('yyyy/M/d HH:mm', intlLocaleOf(context)).format(DateTime.parse(r.dateTime)));
                   }
                   return Row(
                     children: [
                       Icon(Icons.notifications_outlined, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
                       const SizedBox(width: 4),
-                      Text(parts.join('，'), style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                      Text(parts.join(listSeparatorOf(context)), style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     ],
                   );
                 }).toList(),
@@ -154,19 +157,20 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
         final dateOnly = DateTime(day.year, day.month, day.day);
         return markedDates.contains(dateOnly) ? [true] : [];
       },
-      locale: 'zh-TW',
+      locale: intlLocaleOf(context),
       headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
     );
   }
 
   Widget _buildSelectedDateDetail(List<CheckInRecord> records) {
+    final l10n = AppLocalizations.of(context);
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
     final dayRecords = records.where((r) => r.date == dateStr).toList();
 
     if (dayRecords.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16),
-        child: Text('此日無打卡紀錄'),
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(l10n.noCheckInRecord),
       );
     }
 
@@ -200,10 +204,10 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                     ),
                   if (r.note != null && r.note!.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    Text('備註：${r.note}'),
+                    Text(l10n.noteLabel(r.note!)),
                   ],
                   if (timeStr == null && (r.note == null || r.note!.isEmpty))
-                    const Text('已打卡'),
+                    Text(l10n.checkedIn),
                 ],
               ),
             ),

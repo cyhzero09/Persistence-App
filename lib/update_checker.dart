@@ -7,9 +7,17 @@ const String _apiUrl = 'https://api.github.com/repos/$_githubRepo/releases/lates
 class UpdateCheckResult {
   final bool hasUpdate;
   final String? latestVersion;
-  final String? error;
+  final String? errorCode; // 'fetch_failed' | 'empty_version' | 'check_failed'
+  final String? errorDetail;
+  final int? statusCode;
 
-  const UpdateCheckResult({required this.hasUpdate, this.latestVersion, this.error});
+  const UpdateCheckResult({
+    required this.hasUpdate,
+    this.latestVersion,
+    this.errorCode,
+    this.errorDetail,
+    this.statusCode,
+  });
 }
 
 Future<UpdateCheckResult> checkForUpdates(String currentVersion) async {
@@ -19,18 +27,18 @@ Future<UpdateCheckResult> checkForUpdates(String currentVersion) async {
       headers: {'User-Agent': 'Persistence-App'},
     ).timeout(const Duration(seconds: 10));
     if (response.statusCode != 200) {
-      return UpdateCheckResult(hasUpdate: false, error: '無法獲取版本資訊 (${response.statusCode})');
+      return UpdateCheckResult(hasUpdate: false, errorCode: 'fetch_failed', statusCode: response.statusCode);
     }
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     final tagName = data['tag_name'] as String?;
     if (tagName == null || tagName.isEmpty) {
-      return const UpdateCheckResult(hasUpdate: false, error: '版本資訊為空');
+      return const UpdateCheckResult(hasUpdate: false, errorCode: 'empty_version');
     }
     final latestVersion = tagName.startsWith('v') ? tagName.substring(1) : tagName;
     final hasUpdate = _compareVersions(latestVersion, currentVersion) > 0;
     return UpdateCheckResult(hasUpdate: hasUpdate, latestVersion: latestVersion);
   } catch (e) {
-    return UpdateCheckResult(hasUpdate: false, error: '檢查更新失敗：$e');
+    return UpdateCheckResult(hasUpdate: false, errorCode: 'check_failed', errorDetail: e.toString());
   }
 }
 

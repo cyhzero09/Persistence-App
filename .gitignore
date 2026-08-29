@@ -47,5 +47,8 @@ app.*.map.json
 # Generated drift code
 *.g.dart
 
+# Generated l10n code
+lib/l10n/generated/
+
 # Build artifacts
 *.apk
