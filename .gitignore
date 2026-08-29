@@ -46,3 +46,6 @@ app.*.map.json
 
 # Generated drift code
 *.g.dart
+
+# Build artifacts
+*.apk

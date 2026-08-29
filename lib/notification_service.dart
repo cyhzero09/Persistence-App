@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
@@ -27,6 +28,7 @@ class NotificationService {
     required DateTime scheduledDate,
   }) async {
     if (!_initialized) await init();
+    if (kIsWeb) return;
 
     final now = DateTime.now();
     if (scheduledDate.isBefore(now)) return;
@@ -57,6 +59,7 @@ class NotificationService {
   }
 
   Future<void> cancelReminder(int id) async {
+    if (kIsWeb) return;
     await _plugin.cancel(id);
   }
 }
