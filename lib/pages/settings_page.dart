@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../database/database.dart' hide CheckInCategory, CheckInRecord, DiaryEntry, Reminder;
 import '../providers/database_provider.dart';
 import '../providers/check_in_provider.dart';
@@ -341,9 +342,7 @@ class SettingsPage extends ConsumerWidget {
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.downloadFromGitHub)),
-                );
+                _openDownload(context, result.downloadUrl);
               },
               child: Text(l10n.goDownload),
             ),
@@ -353,6 +352,25 @@ class SettingsPage extends ConsumerWidget {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.upToDate)),
+      );
+    }
+  }
+
+  Future<void> _openDownload(BuildContext context, String? url) async {
+    final l10n = AppLocalizations.of(context);
+    if (url == null || url.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.downloadFromGitHub)),
+        );
+      }
+      return;
+    }
+    final uri = Uri.parse(url);
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.downloadFromGitHub)),
       );
     }
   }

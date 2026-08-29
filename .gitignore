@@ -52,3 +52,6 @@ lib/l10n/generated/
 
 # Build artifacts
 *.apk
+
+# MCP config with credentials
+.mcp.json

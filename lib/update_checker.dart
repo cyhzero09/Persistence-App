@@ -7,6 +7,7 @@ const String _apiUrl = 'https://api.github.com/repos/$_githubRepo/releases/lates
 class UpdateCheckResult {
   final bool hasUpdate;
   final String? latestVersion;
+  final String? downloadUrl; // 最新版 APK 的下载链接
   final String? errorCode; // 'fetch_failed' | 'empty_version' | 'check_failed'
   final String? errorDetail;
   final int? statusCode;
@@ -14,6 +15,7 @@ class UpdateCheckResult {
   const UpdateCheckResult({
     required this.hasUpdate,
     this.latestVersion,
+    this.downloadUrl,
     this.errorCode,
     this.errorDetail,
     this.statusCode,
@@ -36,7 +38,24 @@ Future<UpdateCheckResult> checkForUpdates(String currentVersion) async {
     }
     final latestVersion = tagName.startsWith('v') ? tagName.substring(1) : tagName;
     final hasUpdate = _compareVersions(latestVersion, currentVersion) > 0;
-    return UpdateCheckResult(hasUpdate: hasUpdate, latestVersion: latestVersion);
+
+    // 从 release 的 assets 中查找 APK 下载链接
+    String? downloadUrl;
+    final assets = data['assets'] as List?;
+    if (assets != null) {
+      for (final a in assets) {
+        if (a is Map && (a['name'] as String? ?? '').toLowerCase().endsWith('.apk')) {
+          downloadUrl = a['browser_download_url'] as String?;
+          break;
+        }
+      }
+    }
+    // 找不到 asset 时回退到 release 页面
+    if (downloadUrl == null && data['html_url'] is String) {
+      downloadUrl = data['html_url'] as String;
+    }
+
+    return UpdateCheckResult(hasUpdate: hasUpdate, latestVersion: latestVersion, downloadUrl: downloadUrl);
   } catch (e) {
     return UpdateCheckResult(hasUpdate: false, errorCode: 'check_failed', errorDetail: e.toString());
   }
