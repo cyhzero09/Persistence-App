@@ -52,12 +52,33 @@ class ReminderNotifier {
 
   Future<void> toggleReminder(int id, bool completed) async {
     final db = _ref.read(databaseProvider);
-    await (db.update(db.reminders)
-      ..where((t) => t.id.equals(id))).write(RemindersCompanion(isCompleted: Value(completed)));
-    if (completed) {
-      await NotificationService().cancelReminder(id);
+    try {
+      await (db.update(db.reminders)
+        ..where((t) => t.id.equals(id))).write(RemindersCompanion(isCompleted: Value(completed)));
+      if (completed) {
+        await NotificationService().cancelReminder(id);
+      } else {
+        await _rescheduleIfPending(db, id);
+      }
+    } catch (_) {
+      // 通知调度失败不应影响提醒状态的 UI 刷新
     }
     _ref.invalidate(remindersProvider);
+  }
+
+  Future<void> _rescheduleIfPending(AppDatabase db, int id) async {
+    final rows = await (db.select(db.reminders)..where((t) => t.id.equals(id))).get();
+    if (rows.isEmpty) return;
+    final r = rows.first;
+    final dt = DateTime.parse(r.reminderDateTime);
+    if (dt.isAfter(DateTime.now())) {
+      await NotificationService().scheduleReminder(
+        id: r.id,
+        title: r.title,
+        body: r.title,
+        scheduledDate: dt,
+      );
+    }
   }
 
   Future<void> deleteReminder(int id) async {

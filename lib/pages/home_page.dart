@@ -384,10 +384,8 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       }
     } else {
       if (existing != null) {
-        await (db.update(db.checkInRecords)
-          ..where((t) => t.id.equals(existing.id))).write(CheckInRecordsCompanion(
-            isCompleted: Value(false),
-          ));
+        // 取消打卡：删除该条记录，避免残留无效记录
+        await (db.delete(db.checkInRecords)..where((t) => t.id.equals(existing.id))).go();
       }
     }
     ref.invalidate(checkInRecordsForDateProvider(dateStr));
@@ -776,11 +774,29 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
 
   Future<void> _toggleReminder(int id, bool completed) async {
     final db = ref.read(databaseProvider);
-    await (db.update(db.reminders)..where((t) => t.id.equals(id))).write(RemindersCompanion(
-      isCompleted: Value(completed),
-    ));
-    if (completed) {
-      await NotificationService().cancelReminder(id);
+    try {
+      await (db.update(db.reminders)..where((t) => t.id.equals(id))).write(RemindersCompanion(
+        isCompleted: Value(completed),
+      ));
+      if (completed) {
+        await NotificationService().cancelReminder(id);
+      } else {
+        final rows = await (db.select(db.reminders)..where((t) => t.id.equals(id))).get();
+        if (rows.isNotEmpty) {
+          final r = rows.first;
+          final dt = DateTime.parse(r.reminderDateTime);
+          if (dt.isAfter(DateTime.now())) {
+            await NotificationService().scheduleReminder(
+              id: r.id,
+              title: r.title,
+              body: r.title,
+              scheduledDate: dt,
+            );
+          }
+        }
+      }
+    } catch (_) {
+      // 通知调度失败不应影响提醒状态的 UI 刷新
     }
     ref.invalidate(remindersProvider);
   }

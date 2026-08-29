@@ -18,6 +18,12 @@ class NotificationService {
     const iosSettings = DarwinInitializationSettings();
     const settings = InitializationSettings(android: androidSettings, iOS: iosSettings);
     await _plugin.initialize(settings);
+    if (!kIsWeb) {
+      // Android 13+ (API 33+) requires runtime permission to show notifications
+      final androidImpl =
+          _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      await androidImpl?.requestNotificationsPermission();
+    }
     _initialized = true;
   }
 
