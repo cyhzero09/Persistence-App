@@ -96,7 +96,7 @@ class _CategoriesTab extends ConsumerWidget {
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete_outline),
-                          onPressed: () => _deleteCategory(ref, cat.id),
+                          onPressed: () => _deleteCategory(context, ref, cat.id),
                         ),
                       ],
                     ),
@@ -109,7 +109,7 @@ class _CategoriesTab extends ConsumerWidget {
     );
   }
 
-  Future<void> _deleteCategory(WidgetRef ref, int id) async {
+  Future<void> _deleteCategory(BuildContext context, WidgetRef ref, int id) async {
     if (!await confirmDelete(context)) return;
     final db = ref.read(databaseProvider);
     await (db.delete(db.checkInRecords)..where((t) => t.categoryId.equals(id))).go();
@@ -492,7 +492,7 @@ class _DiaryTab extends ConsumerWidget {
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete_outline, size: 18),
-                          onPressed: () => _deleteDiary(ref, entry.id),
+                          onPressed: () => _deleteDiary(context, ref, entry.id),
                         ),
                       ],
                     ),
@@ -520,7 +520,7 @@ class _DiaryTab extends ConsumerWidget {
     ));
   }
 
-  void _deleteDiary(WidgetRef ref, int id) async {
+  Future<void> _deleteDiary(BuildContext context, WidgetRef ref, int id) async {
     if (!await confirmDelete(context)) return;
     final db = ref.read(databaseProvider);
     await (db.delete(db.diaryEntries)..where((t) => t.id.equals(id))).go();
