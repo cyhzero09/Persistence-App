@@ -9,7 +9,6 @@ import '../providers/database_provider.dart';
 import '../providers/check_in_provider.dart';
 import '../widgets/check_in_dialog.dart';
 import '../widgets/check_in_tile.dart';
-import '../widgets/add_entry_sheet.dart';
 import '../widgets/add_sheets.dart';
 import '../providers/diary_provider.dart';
 import '../providers/reminder_provider.dart';
@@ -127,7 +126,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
           switch (_tabController.index) {
             case 0: showModalBottomSheet(context: context, builder: (_) => AddCategorySheet(selectedDate: _selectedDate));
             case 1: showModalBottomSheet(context: context, builder: (_) => AddDiarySheet(initialDate: _selectedDate));
-            case 2: showModalBottomSheet(context: context, builder: (_) => AddEntrySheet(selectedDate: _selectedDate, initialTab: 2));
+            case 2: showModalBottomSheet(context: context, builder: (_) => const AddReminderSheet());
           }
         },
         child: const Icon(Icons.add),
@@ -450,157 +449,17 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
   }
 
   void _showEditCategoryDialog(CheckInCategory category) {
-    final l10n = AppLocalizations.of(context);
-    final nameController = TextEditingController(text: category.name);
-    final descController = TextEditingController(text: category.description ?? '');
-    String emoji = category.emoji;
-    TimeOfDay? editStartTime = category.startTime != null
-        ? TimeOfDay(
-            hour: int.parse(category.startTime!.split(':')[0]),
-            minute: int.parse(category.startTime!.split(':')[1]),
-          )
-        : null;
-    TimeOfDay? editEndTime = category.endTime != null
-        ? TimeOfDay(
-            hour: int.parse(category.endTime!.split(':')[0]),
-            minute: int.parse(category.endTime!.split(':')[1]),
-          )
-        : null;
-    final editWeekdays = <int>{};
-    if (category.repeatWeekdays != null) {
-      editWeekdays.addAll(category.repeatWeekdays!.split(',').map(int.parse));
-    }
-    bool emojiExpanded = false;
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(l10n.editCheckInItem),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: l10n.name, border: const OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descController,
-                  maxLines: 2,
-                  decoration: InputDecoration(labelText: l10n.descriptionOptional, border: const OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                Text(l10n.chooseIcon(emoji), style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    ..._emojis.take(emojiExpanded ? _emojis.length : 8).map((e) => GestureDetector(
-                      onTap: () => setDialogState(() => emoji = e),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: emoji == e ? Theme.of(context).colorScheme.primaryContainer : null,
-                          border: Border.all(color: emoji == e ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outline),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(e, style: const TextStyle(fontSize: 24)),
-                      ),
-                    )),
-                    if (!emojiExpanded)
-                      GestureDetector(
-                        onTap: () => setDialogState(() => emojiExpanded = true),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Theme.of(context).colorScheme.outline),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text('+${_emojis.length - 8}', style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.primary)),
-                        ),
-                      )
-                    else
-                      GestureDetector(
-                        onTap: () => setDialogState(() => emojiExpanded = false),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Theme.of(context).colorScheme.outline),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(Icons.unfold_less, size: 20, color: Theme.of(context).colorScheme.primary),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(editStartTime != null ? '⏰ ${l10n.startTimeValue(editStartTime!.format(context))}' : '⏰ ${l10n.startTimeLabel}'),
-                  trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
-                    final t = await showTimePicker(context: context, initialTime: editStartTime ?? TimeOfDay.now());
-                    if (t != null) setDialogState(() => editStartTime = t);
-                  }),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(editEndTime != null ? '⏰ ${l10n.endTimeValue(editEndTime!.format(context))}' : '⏰ ${l10n.endTimeLabel}'),
-                  trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
-                    final t = await showTimePicker(context: context, initialTime: editEndTime ?? TimeOfDay.now());
-                    if (t != null) setDialogState(() => editEndTime = t);
-                  }),
-                ),
-                const SizedBox(height: 8),
-                Text(l10n.repeatDays, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 4,
-                  children: List.generate(7, (i) => FilterChip(
-                    label: Text(chipWeekdayLabels(context)[i]),
-                    selected: editWeekdays.contains(i),
-                    onSelected: (v) {
-                      setDialogState(() {
-                        if (v) { editWeekdays.add(i); } else { editWeekdays.remove(i); }
-                      });
-                    },
-                  )),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
-            FilledButton(
-              onPressed: nameController.text.trim().isEmpty || editStartTime == null || editEndTime == null || editWeekdays.isEmpty
-                  ? null : () async {
-                final db = ref.read(databaseProvider);
-                await (db.update(db.checkInCategories)
-                  ..where((t) => t.id.equals(category.id)))
-                  .write(CheckInCategoriesCompanion(
-                    name: Value(nameController.text.trim()),
-                    emoji: Value(emoji),
-                    description: descController.text.trim().isNotEmpty ? Value(descController.text.trim()) : const Value.absent(),
-                    startTime: Value('${editStartTime!.hour.toString().padLeft(2, '0')}:${editStartTime!.minute.toString().padLeft(2, '0')}'),
-                    endTime: Value('${editEndTime!.hour.toString().padLeft(2, '0')}:${editEndTime!.minute.toString().padLeft(2, '0')}'),
-                    repeatWeekdays: Value(editWeekdays.join(',')),
-                  ));
-                ref.invalidate(categoriesProvider);
-                if (!ctx.mounted) return;
-                Navigator.pop(ctx);
-              },
-              child: Text(l10n.save),
-            ),
-          ],
-        ),
-      ),
+      builder: (_) => AddCategorySheet(category: category),
     );
   }
 
   void _editDiary(DiaryEntry entry) {
-    Navigator.push(context, MaterialPageRoute(
-      builder: (_) => DiaryEditPage(entry: entry),
-    ));
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => AddDiarySheet(entry: entry),
+    );
   }
 
   Future<void> _deleteDiary(int id) async {
@@ -641,12 +500,9 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
   }
 
   void _editReminder(BuildContext context, Reminder reminder) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        content: _EditReminderSheet(reminder: reminder),
-      ),
+      builder: (_) => AddReminderSheet(editReminder: reminder),
     );
   }
 
@@ -657,190 +513,5 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     // 先刷新 UI，取消通知后台执行，避免卡顿
     ref.invalidate(remindersProvider);
     unawaited(NotificationService().cancelReminder(id));
-  }
-}
-
-class _EditReminderSheet extends ConsumerStatefulWidget {
-  final Reminder reminder;
-  const _EditReminderSheet({required this.reminder});
-
-  @override
-  ConsumerState<_EditReminderSheet> createState() => _EditReminderSheetState();
-}
-
-class _EditReminderSheetState extends ConsumerState<_EditReminderSheet> {
-  final _titleController = TextEditingController();
-  late DateTime _reminderDate;
-  TimeOfDay? _reminderTime;
-  bool _isMultiDay = false;
-  final _selectedWeekdays = <int>{};
-  DateTime? _reminderEndDate;
-
-  @override
-  void initState() {
-    super.initState();
-    final edit = widget.reminder;
-    _titleController.text = edit.title;
-    final dt = DateTime.parse(edit.dateTime);
-    _reminderDate = dt;
-    _reminderTime = TimeOfDay.fromDateTime(dt);
-    if (edit.repeatWeekdays != null) {
-      _selectedWeekdays.addAll(edit.repeatWeekdays!.split(',').map(int.parse));
-      _isMultiDay = _selectedWeekdays.isNotEmpty;
-    }
-    if (edit.repeatEndDate != null) {
-      _reminderEndDate = DateTime.parse(edit.repeatEndDate!);
-    }
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 16, right: 16, top: 16,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(l10n.editReminder,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _titleController,
-            decoration: InputDecoration(labelText: l10n.title, border: const OutlineInputBorder()),
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<bool>(
-            segments: [
-              ButtonSegment(value: false, label: Text(l10n.singleDay)),
-              ButtonSegment(value: true, label: Text(l10n.multiDay)),
-            ],
-            selected: {_isMultiDay},
-            onSelectionChanged: (v) => setState(() => _isMultiDay = v.first),
-          ),
-          const SizedBox(height: 12),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(_isMultiDay
-                ? l10n.startLabel(DateFormat('yyyy/M/d', intlLocaleOf(context)).format(_reminderDate))
-                : DateFormat('yyyy/M/d', intlLocaleOf(context)).format(_reminderDate)),
-            leading: const Icon(Icons.calendar_today),
-            onTap: () async {
-              final dt = await showDatePicker(
-                context: context,
-                initialDate: _reminderDate,
-                firstDate: DateTime.now().subtract(const Duration(days: 1)),
-                lastDate: DateTime.now().add(const Duration(days: 365)),
-              );
-              if (dt != null) setState(() => _reminderDate = dt);
-            },
-          ),
-          Row(
-            children: [
-              Text(l10n.setTime),
-              Switch(
-                value: _reminderTime != null,
-                onChanged: (v) => setState(() => _reminderTime = v ? TimeOfDay.now() : null),
-              ),
-            ],
-          ),
-          if (_reminderTime != null)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text('⏰ ${_reminderTime!.format(context)}'),
-              leading: const Icon(Icons.access_time),
-              onTap: () async {
-                final tm = await showTimePicker(context: context, initialTime: _reminderTime!);
-                if (tm != null) setState(() => _reminderTime = tm);
-              },
-            ),
-          if (_isMultiDay) ...[
-            const SizedBox(height: 8),
-            Text(l10n.repeat, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 6,
-              children: List.generate(7, (i) => FilterChip(
-                label: Text(chipWeekdayLabels(context)[i]),
-                selected: _selectedWeekdays.contains(i),
-                onSelected: (v) {
-                  setState(() {
-                    if (v) { _selectedWeekdays.add(i); } else { _selectedWeekdays.remove(i); }
-                  });
-                },
-              )),
-            ),
-            const SizedBox(height: 8),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(_reminderEndDate != null
-                  ? l10n.endLabel(DateFormat('yyyy/M/d', intlLocaleOf(context)).format(_reminderEndDate!))
-                  : l10n.endDateOptional),
-              trailing: _reminderEndDate != null
-                  ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _reminderEndDate = null))
-                  : null,
-              leading: const Icon(Icons.event),
-              onTap: () async {
-                final dt = await showDatePicker(
-                  context: context,
-                  initialDate: _reminderEndDate ?? _reminderDate.add(const Duration(days: 30)),
-                  firstDate: _reminderDate,
-                  lastDate: DateTime.now().add(const Duration(days: 3650)),
-                );
-                if (dt != null) setState(() => _reminderEndDate = dt);
-              },
-            ),
-            Text(l10n.reminderHint, style: const TextStyle(fontSize: 12)),
-          ],
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _titleController.text.trim().isEmpty ? null : () async {
-              final db = ref.read(databaseProvider);
-              final reminderDt = _reminderTime != null
-                  ? DateTime(_reminderDate.year, _reminderDate.month, _reminderDate.day, _reminderTime!.hour, _reminderTime!.minute)
-                  : _reminderDate;
-              final weekdaysStr = _selectedWeekdays.isNotEmpty ? _selectedWeekdays.join(',') : null;
-              final companion = RemindersCompanion(
-                title: Value(_titleController.text.trim()),
-                reminderDateTime: Value(reminderDt.toIso8601String()),
-                repeatWeekdays: weekdaysStr != null ? Value(weekdaysStr) : const Value.absent(),
-                repeatEndDate: _reminderEndDate != null ? Value(DateFormat('yyyy-MM-dd').format(_reminderEndDate!)) : const Value.absent(),
-              );
-              await (db.update(db.reminders)
-                ..where((t) => t.id.equals(widget.reminder.id)))
-                .write(companion);
-              ref.invalidate(remindersProvider);
-              if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
-              // 通知取消/重排在后台执行，不阻塞界面
-              unawaited(() async {
-                await NotificationService().cancelReminder(widget.reminder.id);
-                if (reminderDt.isAfter(DateTime.now())) {
-                  await NotificationService().scheduleReminder(
-                    id: widget.reminder.id,
-                    title: _titleController.text.trim(),
-                    body: l10n.reminderNotification(_titleController.text.trim()),
-                    scheduledDate: reminderDt,
-                    repeatWeekdays: weekdaysStr,
-                  );
-                }
-              }());
-            },
-            child: Text(l10n.save),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
-      ),
-    );
   }
 }
