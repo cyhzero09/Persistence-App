@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:drift/drift.dart' show Value;
-import '../database/database.dart' hide CheckInCategory, Reminder;
+import '../database/database.dart' hide CheckInCategory, Reminder, DiaryEntry;
 import '../providers/database_provider.dart';
 import '../providers/check_in_provider.dart';
 import '../providers/reminder_provider.dart';

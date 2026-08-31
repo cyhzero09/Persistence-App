@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:table_calendar/table_calendar.dart';
+import '../widgets/calendar_widget.dart';
 import '../database/database.dart' hide CheckInCategory, CheckInRecord, DiaryEntry, Reminder;
 import '../providers/database_provider.dart';
 import '../providers/check_in_provider.dart';
@@ -96,7 +96,12 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       body: Column(
         children: [
           activeDatesAsync.when(
-            data: (dates) => _buildCalendar(dates),
+            data: (dates) => CalendarWidget(
+              selectedDate: _selectedDate,
+              markedDates: _parseMarkedDates(dates),
+              navigable: _expanded,
+              onDateSelected: (d) => setState(() => _selectedDate = d),
+            ),
             loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
             error: (e, _) => Center(child: Text('$e')),
           ),
@@ -247,144 +252,6 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('$e')),
-    );
-  }
-
-  Widget _buildCalendar(List<String> dates) {
-    final markedDates = _parseMarkedDates(dates);
-    if (_expanded) {
-      return TableCalendar(
-        firstDay: DateTime(2024),
-        lastDay: DateTime.now().add(const Duration(days: 365)),
-        focusedDay: _selectedDate,
-        selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-        onDaySelected: (selectedDay, focusedDay) => setState(() => _selectedDate = selectedDay),
-        calendarStyle: CalendarStyle(
-          todayDecoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            shape: BoxShape.circle,
-          ),
-          selectedDecoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary,
-            shape: BoxShape.circle,
-          ),
-          markerDecoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.secondary,
-            shape: BoxShape.circle,
-          ),
-        ),
-        eventLoader: (day) {
-          final dateOnly = DateTime(day.year, day.month, day.day);
-          return markedDates.contains(dateOnly) ? [true] : [];
-        },
-        locale: intlLocaleOf(context),
-        headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
-      );
-    }
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
-    final sunday = _sundayOf(today);
-    final locale = intlLocaleOf(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // 与展开日历一致：居中显示当前月份标题
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text(
-            DateFormat.yMMMM(locale).format(_selectedDate),
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-        ),
-        // 与展开日历一致的星期表头（DateFormat.E + 周末/工作日配色）
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-          child: Row(
-            children: List.generate(7, (i) {
-              final isWeekend = i == 0 || i == 6;
-              return Expanded(
-                child: Center(
-                  child: Text(
-                    DateFormat.E(locale).format(sunday.add(Duration(days: i))),
-                    style: TextStyle(
-                      color: isWeekend ? const Color(0xFF6A6A6A) : const Color(0xFF4F4F4F),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-        const SizedBox(height: 2),
-        _buildWeekRow(sunday.subtract(const Duration(days: 7)), todayDate, markedDates),
-        const SizedBox(height: 4),
-        _buildWeekRow(sunday, todayDate, markedDates),
-        const SizedBox(height: 4),
-        _buildWeekRow(sunday.add(const Duration(days: 7)), todayDate, markedDates),
-      ],
-    );
-  }
-
-  DateTime _sundayOf(DateTime date) {
-    final d = DateTime(date.year, date.month, date.day);
-    return d.subtract(Duration(days: d.weekday % 7));
-  }
-
-  Widget _buildWeekRow(DateTime weekStart, DateTime todayDate, Set<DateTime> markedDates) {
-    final cs = Theme.of(context).colorScheme;
-    final selectedDateOnly = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
-    return SizedBox(
-      height: 56,
-      child: Row(
-        children: List.generate(7, (i) {
-          final day = weekStart.add(Duration(days: i));
-          final dayDate = DateTime(day.year, day.month, day.day);
-          final isSelected = dayDate == selectedDateOnly;
-          final isToday = dayDate == todayDate;
-          final isWeekend = day.weekday == DateTime.saturday || day.weekday == DateTime.sunday;
-          final hasMark = markedDates.contains(dayDate);
-          return Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => setState(() => _selectedDate = day),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isSelected ? cs.primary : (isToday ? cs.primaryContainer : null),
-                    ),
-                    child: Text(
-                      '${day.day}',
-                      style: TextStyle(
-                        fontSize: isSelected || isToday ? 16 : 14,
-                        color: isSelected
-                            ? cs.onPrimary
-                            : (isToday ? cs.onPrimaryContainer : (isWeekend ? const Color(0xFF5A5A5A) : cs.onSurface)),
-                        fontWeight: isToday && !isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: hasMark ? cs.secondary : Colors.transparent,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-      ),
     );
   }
 

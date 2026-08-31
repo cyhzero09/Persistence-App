@@ -6,12 +6,14 @@ class CalendarWidget extends StatelessWidget {
   final DateTime selectedDate;
   final Set<DateTime> markedDates;
   final ValueChanged<DateTime> onDateSelected;
+  final bool navigable;
 
   const CalendarWidget({
     super.key,
     required this.selectedDate,
     required this.markedDates,
     required this.onDateSelected,
+    this.navigable = true,
   });
 
   @override
@@ -22,6 +24,9 @@ class CalendarWidget extends StatelessWidget {
       focusedDay: selectedDate,
       selectedDayPredicate: (day) => isSameDay(selectedDate, day),
       onDaySelected: (selectedDay, focusedDay) => onDateSelected(selectedDay),
+      // navigable=false 时首页折叠态只读当月，展开态可翻月
+      pageJumpingEnabled: navigable,
+      availableGestures: navigable ? AvailableGestures.all : AvailableGestures.none,
       calendarStyle: CalendarStyle(
         todayDecoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primaryContainer,
