@@ -288,14 +288,14 @@ class _CategoriesTab extends ConsumerWidget {
                     repeatWeekdays: Value(weekdaysStr),
                     categoryId: Value(catId),
                   ));
-                  if (reminderDt.isAfter(DateTime.now())) {
-                    await NotificationService().scheduleReminder(
-                      id: id,
-                      title: nameController.text.trim(),
-                      body: l10n.reminderNotification(nameController.text.trim()),
-                      scheduledDate: reminderDt,
-                    );
-                  }
+                  // repeatWeekdays 存在时按周循环，scheduleReminder 会自动计算下一次触发时间
+                  await NotificationService().scheduleReminder(
+                    id: id,
+                    title: nameController.text.trim(),
+                    body: l10n.reminderNotification(nameController.text.trim()),
+                    scheduledDate: reminderDt,
+                    repeatWeekdays: weekdaysStr,
+                  );
                 }
                 ref.invalidate(categoriesProvider);
                 ref.invalidate(remindersProvider);
@@ -801,6 +801,7 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
                       title: _titleController.text.trim(),
                       body: l10n.reminderNotification(_titleController.text.trim()),
                       scheduledDate: reminderDt,
+                      repeatWeekdays: weekdaysStr,
                     );
                   }
                 }());
@@ -815,6 +816,7 @@ class _AddReminderSheetState extends ConsumerState<_AddReminderSheet> {
                     title: _titleController.text.trim(),
                     body: l10n.reminderNotification(_titleController.text.trim()),
                     scheduledDate: reminderDt,
+                    repeatWeekdays: weekdaysStr,
                   ));
                 }
               }

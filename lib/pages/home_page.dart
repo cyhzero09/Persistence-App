@@ -391,6 +391,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       }
     }
     ref.invalidate(checkInRecordsForDateProvider(dateStr));
+    ref.invalidate(checkInRecordsForCategoryProvider(categoryId));
     ref.invalidate(checkInRecordDatesProvider);
   }
 
@@ -410,6 +411,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
         ));
       }
       ref.invalidate(checkInRecordsForDateProvider(dateStr));
+      ref.invalidate(checkInRecordsForCategoryProvider(categoryId));
       ref.invalidate(checkInRecordDatesProvider);
     }
   }
@@ -420,6 +422,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     await (db.delete(db.checkInRecords)..where((t) => t.categoryId.equals(id))).go();
     await (db.delete(db.checkInCategories)..where((t) => t.id.equals(id))).go();
     ref.invalidate(categoriesProvider);
+    ref.invalidate(checkInRecordsForCategoryProvider(id));
     ref.invalidate(checkInRecordDatesProvider);
   }
 
@@ -593,14 +596,14 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                     repeatWeekdays: Value(weekdaysStr),
                     categoryId: Value(catId),
                   ));
-                  if (reminderDt.isAfter(DateTime.now())) {
-                    await NotificationService().scheduleReminder(
-                      id: id,
-                      title: nameController.text.trim(),
-                      body: l10n.reminderNotification(nameController.text.trim()),
-                      scheduledDate: reminderDt,
-                    );
-                  }
+                  // repeatWeekdays 存在时按周循环，scheduleReminder 会自动计算下一次触发时间
+                  await NotificationService().scheduleReminder(
+                    id: id,
+                    title: nameController.text.trim(),
+                    body: l10n.reminderNotification(nameController.text.trim()),
+                    scheduledDate: reminderDt,
+                    repeatWeekdays: weekdaysStr,
+                  );
                 }
                 ref.invalidate(categoriesProvider);
                 ref.invalidate(remindersProvider);
@@ -791,14 +794,14 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
         if (rows.isNotEmpty) {
           final r = rows.first;
           final dt = DateTime.parse(r.reminderDateTime);
-          if (dt.isAfter(DateTime.now())) {
-            await NotificationService().scheduleReminder(
-              id: r.id,
-              title: r.title,
-              body: r.title,
-              scheduledDate: dt,
-            );
-          }
+          // 重复提醒即使当天时间已过，scheduleReminder 也会调度下一次触发
+          await NotificationService().scheduleReminder(
+            id: r.id,
+            title: r.title,
+            body: r.title,
+            scheduledDate: dt,
+            repeatWeekdays: r.repeatWeekdays,
+          );
         }
       }
     } catch (_) {
@@ -996,6 +999,7 @@ class _EditReminderSheetState extends ConsumerState<_EditReminderSheet> {
                     title: _titleController.text.trim(),
                     body: l10n.reminderNotification(_titleController.text.trim()),
                     scheduledDate: reminderDt,
+                    repeatWeekdays: weekdaysStr,
                   );
                 }
               }());

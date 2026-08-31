@@ -14,6 +14,16 @@ class NotificationService {
   Future<void> init() async {
     if (_initialized) return;
     tz_data.initializeTimeZones();
+    // timezone 包的 tz.local 默认是 UTC。若不显式设为设备本地时区，
+    // 定时通知会按 UTC 绝对时间计算触发点，导致在非 UTC 时区（如 +8）推迟数小时甚至误判为不触发。
+    // 这里直接使用设备当前的 UTC 偏移量构建本地时区，保证任何设备上都正确。
+    final localOffset = DateTime.now().timeZoneOffset;
+    tz.setLocalLocation(tz.Location(
+      'LOCAL',
+      [],
+      [],
+      [tz.TimeZone(localOffset.inMilliseconds, isDst: false, abbreviation: 'LOCAL')],
+    ));
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings();
     const settings = InitializationSettings(android: androidSettings, iOS: iosSettings);
@@ -32,6 +42,7 @@ class NotificationService {
     required String title,
     required String body,
     required DateTime scheduledDate,
+    String? repeatWeekdays,
     String channelName = 'Reminders',
     String channelDescription = 'Daily check-in reminders',
   }) async {
@@ -39,7 +50,24 @@ class NotificationService {
     if (kIsWeb) return;
 
     final now = DateTime.now();
-    if (scheduledDate.isBefore(now)) return;
+    // 计算实际触发的本地时间点，以及是否需要按周/按天循环。
+    final weekdaySet = _parseWeekdays(repeatWeekdays);
+    DateTime fireAt = scheduledDate;
+    DateTimeComponents components = DateTimeComponents.dateAndTime;
+
+    if (weekdaySet != null) {
+      // 全部 7 天 → 每天循环；否则 → 在指定星期几循环。
+      if (weekdaySet.length == 7) {
+        components = DateTimeComponents.time;
+        fireAt = _nextTimeOccurrence(now, scheduledDate);
+      } else {
+        components = DateTimeComponents.dayOfWeekAndTime;
+        fireAt = _nextWeekdayOccurrence(now, scheduledDate, weekdaySet);
+      }
+    } else {
+      // 一次性提醒：时间已过则无需再触发。
+      if (scheduledDate.isBefore(now)) return;
+    }
 
     final androidDetails = AndroidNotificationDetails(
       'reminder_channel',
@@ -52,18 +80,49 @@ class NotificationService {
     final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     final location = tz.local;
-    final tzScheduledDate = tz.TZDateTime.from(scheduledDate, location);
+    final tzFireAt = tz.TZDateTime.from(fireAt, location);
 
     await _plugin.zonedSchedule(
       id,
       title,
       body,
-      tzScheduledDate,
+      tzFireAt,
       details,
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.dateAndTime,
+      matchDateTimeComponents: components,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
+  }
+
+  /// 解析 repeatWeekdays（0=周一 … 6=周日，逗号分隔）为 {1=周一 … 7=周日}；
+  /// 为 null 或为空返回 null（表示一次性提醒）。
+  Set<int>? _parseWeekdays(String? repeatWeekdays) {
+    if (repeatWeekdays == null || repeatWeekdays.trim().isEmpty) return null;
+    final parsed = <int>{};
+    for (final part in repeatWeekdays.split(',')) {
+      final v = int.tryParse(part.trim());
+      if (v == null || v < 0 || v > 6) continue;
+      parsed.add(v + 1); // 0=周一→1 … 6=周日→7
+    }
+    return parsed.isEmpty ? null : parsed;
+  }
+
+  /// 从 [from] 以后、包含 [base] 当天及后续，取下一个 target 时刻（保留 [base] 的时分）。
+  DateTime _nextTimeOccurrence(DateTime from, DateTime base) {
+    final candidate = DateTime(from.year, from.month, from.day, base.hour, base.minute);
+    return candidate.isAfter(from) ? candidate : candidate.add(const Duration(days: 1));
+  }
+
+  /// 从 [from] 以后找到最近的、星期几在 [weekdays] 中的触发时刻（保留 [base] 的时分）。
+  DateTime _nextWeekdayOccurrence(DateTime from, DateTime base, Set<int> weekdays) {
+    var candidate = DateTime(from.year, from.month, from.day, base.hour, base.minute);
+    for (var i = 0; i < 8; i++) {
+      if (candidate.isAfter(from) && weekdays.contains(candidate.weekday)) {
+        return candidate;
+      }
+      candidate = candidate.add(const Duration(days: 1));
+    }
+    return _nextTimeOccurrence(from, base);
   }
 
   Future<void> cancelReminder(int id) async {

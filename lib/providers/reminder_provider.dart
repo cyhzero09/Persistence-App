@@ -39,14 +39,22 @@ class ReminderNotifier {
     final id = await db.into(db.reminders).insert(companion);
     _ref.invalidate(remindersProvider);
     final dt = DateTime.parse(companion.reminderDateTime.value);
-    if (dt.isAfter(DateTime.now())) {
-      // 通知调度在后台进行，不阻塞界面刷新
-      unawaited(NotificationService().scheduleReminder(
-        id: id,
-        title: companion.title.value,
-        body: notificationBody ?? companion.title.value,
-        scheduledDate: dt,
-      ));
+    // 通知调度在后台进行，不阻塞界面刷新
+    unawaited(NotificationService().scheduleReminder(
+      id: id,
+      title: companion.title.value,
+      body: notificationBody ?? companion.title.value,
+      scheduledDate: dt,
+      repeatWeekdays: _clampWeekdays(companion),
+    ));
+  }
+
+  /// 安全读取 companion 中的 repeatWeekdays（可能为 Value.absent()）。
+  String? _clampWeekdays(RemindersCompanion companion) {
+    try {
+      return companion.repeatWeekdays.value;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -72,14 +80,14 @@ class ReminderNotifier {
     if (rows.isEmpty) return;
     final r = rows.first;
     final dt = DateTime.parse(r.reminderDateTime);
-    if (dt.isAfter(DateTime.now())) {
-      await NotificationService().scheduleReminder(
-        id: r.id,
-        title: r.title,
-        body: r.title,
-        scheduledDate: dt,
-      );
-    }
+    // 重复提醒即使当天时间已过，也会调度下一次触发
+    await NotificationService().scheduleReminder(
+      id: r.id,
+      title: r.title,
+      body: r.title,
+      scheduledDate: dt,
+      repeatWeekdays: r.repeatWeekdays,
+    );
   }
 
   Future<void> deleteReminder(int id) async {
