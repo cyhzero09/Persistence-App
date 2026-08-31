@@ -115,6 +115,7 @@ class _CategoriesTab extends ConsumerWidget {
     await (db.delete(db.checkInRecords)..where((t) => t.categoryId.equals(id))).go();
     await (db.delete(db.checkInCategories)..where((t) => t.id.equals(id))).go();
     ref.invalidate(categoriesProvider);
+    ref.invalidate(checkInRecordsForCategoryProvider(id));
     ref.invalidate(checkInRecordDatesProvider);
   }
 

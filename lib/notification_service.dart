@@ -1,7 +1,8 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
+import 'models/reminder.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._();
@@ -82,6 +83,8 @@ class NotificationService {
     final location = tz.local;
     final tzFireAt = tz.TZDateTime.from(fireAt, location);
 
+    // ignore: avoid_print
+    debugPrint('scheduleReminder id=$id at ${tzFireAt.toLocal()} $components');
     await _plugin.zonedSchedule(
       id,
       title,
@@ -92,6 +95,32 @@ class NotificationService {
       matchDateTimeComponents: components,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
+  }
+
+  /// 启动时调用：清空旧的（可能是错误时区排的）调度，并按当前逻辑重建所有
+  /// 尚未完成的提醒。这样修复时区后无需重装也能恢复正常触发。
+  Future<void> resyncPending(List<Reminder> reminders) async {
+    if (_initialized == false) await init();
+    if (kIsWeb) return;
+    // 先清除所有旧调度，避免沿用旧版本错误时区/重复的取消残留。
+    if (!kIsWeb) await _plugin.cancelAll();
+    for (final r in reminders) {
+      if (r.isCompleted) continue;
+      final dt = DateTime.parse(r.dateTime);
+      try {
+        await scheduleReminder(
+          id: r.id,
+          title: r.title,
+          body: r.title,
+          scheduledDate: dt,
+          repeatWeekdays: r.repeatWeekdays,
+        );
+      } catch (e) {
+        // 单条失败不影响其余提醒的重建
+        // ignore: avoid_print
+        debugPrint('resync reminder ${r.id} failed: $e');
+      }
+    }
   }
 
   /// 解析 repeatWeekdays（0=周一 … 6=周日，逗号分隔）为 {1=周一 … 7=周日}；

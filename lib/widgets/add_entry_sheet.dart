@@ -237,6 +237,7 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> with SingleTicker
       note: _noteController.text.trim().isNotEmpty ? Value(_noteController.text.trim()) : const Value.absent(),
     ));
     ref.invalidate(checkInRecordsForDateProvider(dateStr));
+    ref.invalidate(checkInRecordsForCategoryProvider(_selectedCategoryId!));
     ref.invalidate(checkInRecordDatesProvider);
     if (context.mounted) Navigator.pop(context);
   }
