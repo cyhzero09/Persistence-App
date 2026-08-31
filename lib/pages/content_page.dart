@@ -18,6 +18,7 @@ import 'category_detail_page.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../l10n/locale_helpers.dart';
 import '../utils/confirm_delete.dart';
+import '../widgets/add_sheets.dart';
 
 const _emojis = [
   '🏃','📚','💧','🧘','💪','🎵','✍','🍎','☕','🎮','📝','🛌','🎯','🌈',
@@ -63,7 +64,10 @@ class _CategoriesTab extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesProvider);
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddCategoryDialog(context, ref),
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          builder: (_) => const AddCategorySheet(),
+        ),
         child: const Icon(Icons.add),
       ),
       body: categoriesAsync.when(
@@ -117,198 +121,6 @@ class _CategoriesTab extends ConsumerWidget {
     ref.invalidate(categoriesProvider);
     ref.invalidate(checkInRecordsForCategoryProvider(id));
     ref.invalidate(checkInRecordDatesProvider);
-  }
-
-  void _showAddCategoryDialog(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final nameController = TextEditingController();
-    final descController = TextEditingController();
-    String emoji = '📌';
-    TimeOfDay? catStartTime;
-    TimeOfDay? catEndTime;
-    final catWeekdays = <int>{};
-    bool addReminder = false;
-    TimeOfDay? reminderTime;
-
-    bool emojiExpanded = false;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(l10n.addCheckInItem),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: l10n.name, border: const OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descController,
-                  maxLines: 2,
-                  decoration: InputDecoration(labelText: l10n.descriptionOptional, border: const OutlineInputBorder(), hintText: l10n.descriptionHint),
-                ),
-                const SizedBox(height: 12),
-                Text(l10n.chooseIcon(emoji), style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    ..._emojis.take(emojiExpanded ? _emojis.length : 8).map((e) => GestureDetector(
-                      onTap: () => setDialogState(() => emoji = e),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: emoji == e ? Theme.of(context).colorScheme.primaryContainer : null,
-                          border: Border.all(color: emoji == e ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outline),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(e, style: const TextStyle(fontSize: 24)),
-                      ),
-                    )),
-                    if (!emojiExpanded)
-                      GestureDetector(
-                        onTap: () => setDialogState(() => emojiExpanded = true),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Theme.of(context).colorScheme.outline),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text('+${_emojis.length - 8}', style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.primary)),
-                        ),
-                      )
-                    else
-                      GestureDetector(
-                        onTap: () => setDialogState(() => emojiExpanded = false),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Theme.of(context).colorScheme.outline),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(Icons.unfold_less, size: 20, color: Theme.of(context).colorScheme.primary),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(catStartTime != null ? '⏰ ${l10n.startTimeValue(catStartTime!.format(context))}' : '⏰ ${l10n.startTimeLabel}'),
-                  trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
-                    final t = await showTimePicker(context: context, initialTime: catStartTime ?? TimeOfDay.now());
-                    if (t != null) setDialogState(() => catStartTime = t);
-                  }),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(catEndTime != null ? '⏰ ${l10n.endTimeValue(catEndTime!.format(context))}' : '⏰ ${l10n.endTimeLabel}'),
-                  trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
-                    final t = await showTimePicker(context: context, initialTime: catEndTime ?? TimeOfDay.now());
-                    if (t != null) setDialogState(() => catEndTime = t);
-                  }),
-                ),
-                const SizedBox(height: 8),
-                Text(l10n.repeatDays, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 4,
-                  children: List.generate(7, (i) => FilterChip(
-                    label: Text(chipWeekdayLabels(context)[i]),
-                    selected: catWeekdays.contains(i),
-                    onSelected: (v) {
-                      setDialogState(() {
-                        if (v) { catWeekdays.add(i); } else { catWeekdays.remove(i); }
-                      });
-                    },
-                  )),
-                ),
-                const SizedBox(height: 12),
-                const Divider(),
-                Row(
-                  children: [
-                    Text(l10n.addReminder),
-                    Switch(
-                      value: addReminder,
-                      onChanged: (v) => setDialogState(() => addReminder = v),
-                    ),
-                  ],
-                ),
-                if (addReminder) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Text(l10n.setTime),
-                      Switch(
-                        value: reminderTime != null,
-                        onChanged: (v) => setDialogState(() {
-                          reminderTime = v ? TimeOfDay.now() : null;
-                        }),
-                      ),
-                    ],
-                  ),
-                  if (reminderTime != null)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text('⏰ ${reminderTime!.format(context)}'),
-                      leading: const Icon(Icons.access_time),
-                      onTap: () async {
-                        final tm = await showTimePicker(context: context, initialTime: reminderTime!);
-                        if (tm != null) setDialogState(() => reminderTime = tm);
-                      },
-                    ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
-            FilledButton(
-              onPressed: nameController.text.trim().isEmpty || catStartTime == null || catEndTime == null || catWeekdays.isEmpty
-                  ? null : () async {
-                final db = ref.read(databaseProvider);
-                final weekdaysStr = catWeekdays.join(',');
-                final catId = await db.into(db.checkInCategories).insert(CheckInCategoriesCompanion.insert(
-                  name: nameController.text.trim(),
-                  emoji: emoji,
-                  description: descController.text.trim().isNotEmpty ? Value(descController.text.trim()) : const Value.absent(),
-                  startTime: Value('${catStartTime!.hour.toString().padLeft(2, '0')}:${catStartTime!.minute.toString().padLeft(2, '0')}'),
-                  endTime: Value('${catEndTime!.hour.toString().padLeft(2, '0')}:${catEndTime!.minute.toString().padLeft(2, '0')}'),
-                  repeatWeekdays: Value(weekdaysStr),
-                ));
-                if (addReminder && reminderTime != null) {
-                  final reminderDt = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day,
-                      reminderTime!.hour, reminderTime!.minute);
-                  final id = await db.into(db.reminders).insert(RemindersCompanion.insert(
-                    title: nameController.text.trim(),
-                    reminderDateTime: reminderDt.toIso8601String(),
-                    repeatWeekdays: Value(weekdaysStr),
-                    categoryId: Value(catId),
-                  ));
-                  // repeatWeekdays 存在时按周循环，scheduleReminder 会自动计算下一次触发时间
-                  await NotificationService().scheduleReminder(
-                    id: id,
-                    title: nameController.text.trim(),
-                    body: l10n.reminderNotification(nameController.text.trim()),
-                    scheduledDate: reminderDt,
-                    repeatWeekdays: weekdaysStr,
-                  );
-                }
-                ref.invalidate(categoriesProvider);
-                ref.invalidate(remindersProvider);
-                if (!ctx.mounted) return;
-                Navigator.pop(ctx);
-              },
-              child: Text(l10n.add),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showEditCategoryDialog(BuildContext context, WidgetRef ref, CheckInCategory category) {
@@ -507,9 +319,10 @@ class _DiaryTab extends ConsumerWidget {
         error: (e, _) => Center(child: Text('$e')),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(context, MaterialPageRoute(
-          builder: (_) => const DiaryEditPage(),
-        )),
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          builder: (_) => const AddDiarySheet(),
+        ),
         child: const Icon(Icons.edit),
       ),
     );

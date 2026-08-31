@@ -10,6 +10,7 @@ import '../providers/check_in_provider.dart';
 import '../widgets/check_in_dialog.dart';
 import '../widgets/check_in_tile.dart';
 import '../widgets/add_entry_sheet.dart';
+import '../widgets/add_sheets.dart';
 import '../providers/diary_provider.dart';
 import '../providers/reminder_provider.dart';
 import '../notification_service.dart';
@@ -124,8 +125,8 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           switch (_tabController.index) {
-            case 0: _showAddCategoryDialog();
-            case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const DiaryEditPage()));
+            case 0: showModalBottomSheet(context: context, builder: (_) => AddCategorySheet(selectedDate: _selectedDate));
+            case 1: showModalBottomSheet(context: context, builder: (_) => AddDiarySheet(initialDate: _selectedDate));
             case 2: showModalBottomSheet(context: context, builder: (_) => AddEntrySheet(selectedDate: _selectedDate, initialTab: 2));
           }
         },
@@ -284,25 +285,43 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
     final sunday = _sundayOf(today);
+    final locale = intlLocaleOf(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // 与展开日历一致：居中显示当前月份标题
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Row(
-            children: List.generate(7, (i) => Expanded(
-              child: Center(
-                child: Text(calendarWeekdayLabels(context)[i],
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ),
-              ),
-            )),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            DateFormat.yMMMM(locale).format(_selectedDate),
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
         ),
+        // 与展开日历一致的星期表头（DateFormat.E + 周末/工作日配色）
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          child: Row(
+            children: List.generate(7, (i) {
+              final isWeekend = i == 0 || i == 6;
+              return Expanded(
+                child: Center(
+                  child: Text(
+                    DateFormat.E(locale).format(sunday.add(Duration(days: i))),
+                    style: TextStyle(
+                      color: isWeekend ? const Color(0xFF6A6A6A) : const Color(0xFF4F4F4F),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+        const SizedBox(height: 2),
         _buildWeekRow(sunday.subtract(const Duration(days: 7)), todayDate, markedDates),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         _buildWeekRow(sunday, todayDate, markedDates),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         _buildWeekRow(sunday.add(const Duration(days: 7)), todayDate, markedDates),
       ],
     );
@@ -314,54 +333,58 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
   }
 
   Widget _buildWeekRow(DateTime weekStart, DateTime todayDate, Set<DateTime> markedDates) {
-    final days = List.generate(7, (i) => weekStart.add(Duration(days: i)));
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+    final cs = Theme.of(context).colorScheme;
+    final selectedDateOnly = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    return SizedBox(
+      height: 56,
       child: Row(
-        children: days.map((day) {
+        children: List.generate(7, (i) {
+          final day = weekStart.add(Duration(days: i));
           final dayDate = DateTime(day.year, day.month, day.day);
-          final isSelected = dayDate == DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+          final isSelected = dayDate == selectedDateOnly;
           final isToday = dayDate == todayDate;
+          final isWeekend = day.weekday == DateTime.saturday || day.weekday == DateTime.sunday;
           final hasMark = markedDates.contains(dayDate);
           return Expanded(
             child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () => setState(() => _selectedDate = day),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primary
-                      : (isToday ? Theme.of(context).colorScheme.primaryContainer : null),
-                  shape: BoxShape.circle,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isSelected ? cs.primary : (isToday ? cs.primaryContainer : null),
+                    ),
+                    child: Text(
                       '${day.day}',
                       style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                        fontSize: isSelected || isToday ? 16 : 14,
+                        color: isSelected
+                            ? cs.onPrimary
+                            : (isToday ? cs.onPrimaryContainer : (isWeekend ? const Color(0xFF5A5A5A) : cs.onSurface)),
+                        fontWeight: isToday && !isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
-                    if (hasMark)
-                      Container(
-                        width: 5,
-                        height: 5,
-                        margin: const EdgeInsets.only(top: 2),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.secondary,
-                          shape: BoxShape.circle,
-                        ),
-                      )
-                    else
-                      const SizedBox(height: 7),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: hasMark ? cs.secondary : Colors.transparent,
+                    ),
+                  ),
+                ],
               ),
             ),
           );
-        }).toList(),
+        }),
       ),
     );
   }
@@ -424,198 +447,6 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     ref.invalidate(categoriesProvider);
     ref.invalidate(checkInRecordsForCategoryProvider(id));
     ref.invalidate(checkInRecordDatesProvider);
-  }
-
-  void _showAddCategoryDialog() {
-    final l10n = AppLocalizations.of(context);
-    final nameController = TextEditingController();
-    final descController = TextEditingController();
-    String emoji = '📌';
-    TimeOfDay? catStartTime;
-    TimeOfDay? catEndTime;
-    final catWeekdays = <int>{};
-    bool addReminder = false;
-    TimeOfDay? reminderTime;
-
-    bool emojiExpanded = false;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(l10n.addCheckInItem),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: l10n.name, border: const OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descController,
-                  maxLines: 2,
-                  decoration: InputDecoration(labelText: l10n.descriptionOptional, border: const OutlineInputBorder(), hintText: l10n.descriptionHint),
-                ),
-                const SizedBox(height: 12),
-                Text(l10n.chooseIcon(emoji), style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    ..._emojis.take(emojiExpanded ? _emojis.length : 8).map((e) => GestureDetector(
-                      onTap: () => setDialogState(() => emoji = e),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: emoji == e ? Theme.of(context).colorScheme.primaryContainer : null,
-                          border: Border.all(color: emoji == e ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outline),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(e, style: const TextStyle(fontSize: 24)),
-                      ),
-                    )),
-                    if (!emojiExpanded)
-                      GestureDetector(
-                        onTap: () => setDialogState(() => emojiExpanded = true),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Theme.of(context).colorScheme.outline),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text('+${_emojis.length - 8}', style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.primary)),
-                        ),
-                      )
-                    else
-                      GestureDetector(
-                        onTap: () => setDialogState(() => emojiExpanded = false),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Theme.of(context).colorScheme.outline),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(Icons.unfold_less, size: 20, color: Theme.of(context).colorScheme.primary),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(catStartTime != null ? '⏰ ${l10n.startTimeValue(catStartTime!.format(context))}' : '⏰ ${l10n.startTimeLabel}'),
-                  trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
-                    final t = await showTimePicker(context: context, initialTime: catStartTime ?? TimeOfDay.now());
-                    if (t != null) setDialogState(() => catStartTime = t);
-                  }),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(catEndTime != null ? '⏰ ${l10n.endTimeValue(catEndTime!.format(context))}' : '⏰ ${l10n.endTimeLabel}'),
-                  trailing: IconButton(icon: const Icon(Icons.access_time), onPressed: () async {
-                    final t = await showTimePicker(context: context, initialTime: catEndTime ?? TimeOfDay.now());
-                    if (t != null) setDialogState(() => catEndTime = t);
-                  }),
-                ),
-                const SizedBox(height: 8),
-                Text(l10n.repeatDays, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 4,
-                  children: List.generate(7, (i) => FilterChip(
-                    label: Text(chipWeekdayLabels(context)[i]),
-                    selected: catWeekdays.contains(i),
-                    onSelected: (v) {
-                      setDialogState(() {
-                        if (v) { catWeekdays.add(i); } else { catWeekdays.remove(i); }
-                      });
-                    },
-                  )),
-                ),
-                const SizedBox(height: 12),
-                const Divider(),
-                Row(
-                  children: [
-                    Text(l10n.addReminder),
-                    Switch(
-                      value: addReminder,
-                      onChanged: (v) => setDialogState(() => addReminder = v),
-                    ),
-                  ],
-                ),
-                if (addReminder) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Text(l10n.setTime),
-                      Switch(
-                        value: reminderTime != null,
-                        onChanged: (v) => setDialogState(() {
-                          reminderTime = v ? TimeOfDay.now() : null;
-                        }),
-                      ),
-                    ],
-                  ),
-                  if (reminderTime != null)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text('⏰ ${reminderTime!.format(context)}'),
-                      leading: const Icon(Icons.access_time),
-                      onTap: () async {
-                        final tm = await showTimePicker(context: context, initialTime: reminderTime!);
-                        if (tm != null) setDialogState(() => reminderTime = tm);
-                      },
-                    ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
-            FilledButton(
-              onPressed: nameController.text.trim().isEmpty || catStartTime == null || catEndTime == null || catWeekdays.isEmpty
-                  ? null : () async {
-                final db = ref.read(databaseProvider);
-                final weekdaysStr = catWeekdays.join(',');
-                final catId = await db.into(db.checkInCategories).insert(CheckInCategoriesCompanion.insert(
-                  name: nameController.text.trim(),
-                  emoji: emoji,
-                  description: descController.text.trim().isNotEmpty ? Value(descController.text.trim()) : const Value.absent(),
-                  startTime: Value('${catStartTime!.hour.toString().padLeft(2, '0')}:${catStartTime!.minute.toString().padLeft(2, '0')}'),
-                  endTime: Value('${catEndTime!.hour.toString().padLeft(2, '0')}:${catEndTime!.minute.toString().padLeft(2, '0')}'),
-                  repeatWeekdays: Value(weekdaysStr),
-                ));
-                if (addReminder && reminderTime != null) {
-                  final reminderDt = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day,
-                      reminderTime!.hour, reminderTime!.minute);
-                  final id = await db.into(db.reminders).insert(RemindersCompanion.insert(
-                    title: nameController.text.trim(),
-                    reminderDateTime: reminderDt.toIso8601String(),
-                    repeatWeekdays: Value(weekdaysStr),
-                    categoryId: Value(catId),
-                  ));
-                  // repeatWeekdays 存在时按周循环，scheduleReminder 会自动计算下一次触发时间
-                  await NotificationService().scheduleReminder(
-                    id: id,
-                    title: nameController.text.trim(),
-                    body: l10n.reminderNotification(nameController.text.trim()),
-                    scheduledDate: reminderDt,
-                    repeatWeekdays: weekdaysStr,
-                  );
-                }
-                ref.invalidate(categoriesProvider);
-                ref.invalidate(remindersProvider);
-                if (!ctx.mounted) return;
-                Navigator.pop(ctx);
-              },
-              child: Text(l10n.add),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showEditCategoryDialog(CheckInCategory category) {
