@@ -640,7 +640,7 @@ class _AddReminderSheetState extends ConsumerState<AddReminderSheet> {
                       title: Text('⏰ ${_reminderTime!.format(context)}'),
                       leading: const Icon(Icons.access_time),
                       onTap: () async {
-                        final tm = await showTimePicker(context: context, initialTime: _reminderTime!);
+                        final tm = await showTimeWheelPicker(context, initialTime: _reminderTime!);
                         if (tm != null) setState(() => _reminderTime = tm);
                       },
                     ),
