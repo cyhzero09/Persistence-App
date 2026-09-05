@@ -85,16 +85,46 @@ class NotificationService {
 
     // ignore: avoid_print
     debugPrint('scheduleReminder id=$id at ${tzFireAt.toLocal()} $components');
+    // 优先用精确闹钟（保证到点准时触发）；系统不允许精确时退回不精确模式。
+    // Android 12+ 默认拒绝精确闹钟，但 USE_EXACT_ALARM 对侧载应用自动授予。
+    final mode = await _scheduleMode();
     await _plugin.zonedSchedule(
       id,
       title,
       body,
       tzFireAt,
       details,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: mode,
       matchDateTimeComponents: components,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
+  }
+
+  /// 返回当前设备可用的 Android 调度模式：优先精确，无法精确则退回不精确。
+  Future<AndroidScheduleMode> _scheduleMode() async {
+    if (kIsWeb) return AndroidScheduleMode.inexact;
+    final android =
+        _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    try {
+      final canExact = await android?.canScheduleExactNotifications() ?? false;
+      return canExact
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle;
+    } catch (_) {
+      return AndroidScheduleMode.inexactAllowWhileIdle;
+    }
+  }
+
+  /// 是否可精确调度（供 UI 判断是否需要引导用户开启精确闹钟权限）。
+  Future<bool> canScheduleExact() async {
+    if (kIsWeb) return false;
+    final android =
+        _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    try {
+      return await android?.canScheduleExactNotifications() ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// 启动时调用：清空旧的（可能是错误时区排的）调度，并按当前逻辑重建所有
