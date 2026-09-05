@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/cupertino.dart' show CupertinoTimerPicker, CupertinoTimerPickerMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +20,57 @@ const _emojis = [
   '🏃','📚','💧','🧘','💪','🎵','✍','🍎','☕','🎮','📝','🛌','🎯','🌈',
   '💻','📱','🎨','🎬','🎧','🏋','🚴','🏊','🥗','🧠','💊','🧹','🎁','💡',
 ];
+
+/// 「小时/分钟」上下滚轮时间选择器（底部弹窗，统一风格）。
+Future<TimeOfDay?> showTimeWheelPicker(
+  BuildContext context, {
+  required TimeOfDay initialTime,
+}) {
+  return showModalBottomSheet<TimeOfDay>(
+    context: context,
+    builder: (sheetContext) {
+      // 局部可变时长，供滚轮变更与确认按钮同步
+      var chosen = Duration(hours: initialTime.hour, minutes: initialTime.minute);
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 180,
+                width: double.infinity,
+                child: CupertinoTimerPicker(
+                  mode: CupertinoTimerPickerMode.hm,
+                  minuteInterval: 1,
+                  initialTimerDuration: chosen,
+                  onTimerDurationChanged: (d) => chosen = d,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                    child: const Text('取消'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(
+                      TimeOfDay(hour: chosen.inHours, minute: chosen.inMinutes % 60),
+                    ),
+                    child: const Text('确定'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
 
 /// 「新增/编辑打卡项目」底部弹窗，样式与提醒弹窗一致。
 class AddCategorySheet extends ConsumerStatefulWidget {
@@ -185,7 +237,7 @@ class _AddCategorySheetState extends ConsumerState<AddCategorySheet> {
                         title: Text('⏰ ${_reminderTime!.format(context)}'),
                         leading: const Icon(Icons.access_time),
                         onTap: () async {
-                          final tm = await showTimePicker(context: context, initialTime: _reminderTime!);
+                          final tm = await showTimeWheelPicker(context, initialTime: _reminderTime!);
                           if (tm != null) setState(() => _reminderTime = tm);
                         },
                       ),
