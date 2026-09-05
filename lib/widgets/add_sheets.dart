@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart' show CupertinoTimerPicker, CupertinoTimerPickerMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -21,55 +20,165 @@ const _emojis = [
   '💻','📱','🎨','🎬','🎧','🏋','🚴','🏊','🥗','🧠','💊','🧹','🎁','💡',
 ];
 
-/// 「小时/分钟」上下滚轮时间选择器（底部弹窗，统一风格）。
+/// 「小时/分钟」主题色双列滚轮时间选择器（底部弹窗）。
 Future<TimeOfDay?> showTimeWheelPicker(
   BuildContext context, {
   required TimeOfDay initialTime,
 }) {
   return showModalBottomSheet<TimeOfDay>(
     context: context,
-    builder: (sheetContext) {
-      // 局部可变时长，供滚轮变更与确认按钮同步
-      var chosen = Duration(hours: initialTime.hour, minutes: initialTime.minute);
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 180,
-                width: double.infinity,
-                child: CupertinoTimerPicker(
-                  mode: CupertinoTimerPickerMode.hm,
-                  minuteInterval: 1,
-                  initialTimerDuration: chosen,
-                  onTimerDurationChanged: (d) => chosen = d,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+    builder: (_) => _TimeWheelSheet(initial: initialTime),
+  );
+}
+
+class _TimeWheelSheet extends StatefulWidget {
+  final TimeOfDay initial;
+  const _TimeWheelSheet({required this.initial});
+  @override
+  State<_TimeWheelSheet> createState() => _TimeWheelSheetState();
+}
+
+class _TimeWheelSheetState extends State<_TimeWheelSheet> {
+  late int _hour = widget.initial.hour;
+  late int _minute = widget.initial.minute;
+  static const double _itemExtent = 38;
+
+  void _confirm() {
+    Navigator.of(context).pop(TimeOfDay(hour: _hour, minute: _minute));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    const double height = 180;
+    final topLine = (height - _itemExtent) / 2;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: height,
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(sheetContext).pop(),
-                    child: const Text('取消'),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _NumberWheel(
+                        count: 24,
+                        selected: _hour,
+                        color: scheme.primary,
+                        dim: scheme.onSurfaceVariant,
+                        onChanged: (v) => setState(() => _hour = v),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6),
+                        child: Text(':', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w600)),
+                      ),
+                      _NumberWheel(
+                        count: 60,
+                        selected: _minute,
+                        color: scheme.primary,
+                        dim: scheme.onSurfaceVariant,
+                        padLeft: true,
+                        onChanged: (v) => setState(() => _minute = v),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: () => Navigator.of(sheetContext).pop(
-                      TimeOfDay(hour: chosen.inHours, minute: chosen.inMinutes % 60),
+                  IgnorePointer(
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          top: topLine, left: 0, right: 0,
+                          child: Container(height: 1, color: scheme.outlineVariant),
+                        ),
+                        Positioned(
+                          top: topLine + _itemExtent, left: 0, right: 0,
+                          child: Container(height: 1, color: scheme.outlineVariant),
+                        ),
+                      ],
                     ),
-                    child: const Text('确定'),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('取消'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(onPressed: _confirm, child: const Text('确定')),
+              ],
+            ),
+          ],
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
+}
+
+class _NumberWheel extends StatefulWidget {
+  final int count;
+  final int selected;
+  final Color color;
+  final Color dim;
+  final bool padLeft;
+  final ValueChanged<int> onChanged;
+  const _NumberWheel({
+    required this.count,
+    required this.selected,
+    required this.color,
+    required this.dim,
+    required this.onChanged,
+    this.padLeft = false,
+  });
+  @override
+  State<_NumberWheel> createState() => _NumberWheelState();
+}
+
+class _NumberWheelState extends State<_NumberWheel> {
+  late final FixedExtentScrollController _ctrl =
+      FixedExtentScrollController(initialItem: widget.selected);
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 68,
+      child: ListWheelScrollView(
+        controller: _ctrl,
+        itemExtent: 38,
+        overAndUnderCenterOpacity: 0.35,
+        physics: const FixedExtentScrollPhysics(),
+        onSelectedItemChanged: widget.onChanged,
+        children: List.generate(widget.count, (i) {
+          final sel = i == widget.selected;
+          final txt = widget.padLeft ? '$i'.padLeft(2, '0') : '$i';
+          return Center(
+            child: Text(
+              txt,
+              style: TextStyle(
+                fontSize: sel ? 26 : 18,
+                fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                color: sel ? widget.color : widget.dim,
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
 }
 
 /// 「新增/编辑打卡项目」底部弹窗，样式与提醒弹窗一致。
