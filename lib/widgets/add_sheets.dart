@@ -325,32 +325,42 @@ class _AddCategorySheetState extends ConsumerState<AddCategorySheet> {
                       Text(l10n.addReminder),
                       Switch(
                         value: _addReminder,
-                        onChanged: (v) => setState(() => _addReminder = v),
+                        onChanged: (v) async {
+                          if (!v) {
+                            setState(() {
+                              _addReminder = false;
+                              _reminderTime = null;
+                            });
+                            return;
+                          }
+                          // 开启即直接弹出时间滚轮选择器，取消则回退开关
+                          final tm = await showTimeWheelPicker(
+                            context,
+                            initialTime: _reminderTime ?? TimeOfDay.now(),
+                          );
+                          if (!mounted) return;
+                          if (tm == null) {
+                            setState(() => _addReminder = false);
+                          } else {
+                            setState(() {
+                              _addReminder = true;
+                              _reminderTime = tm;
+                            });
+                          }
+                        },
                       ),
                     ],
                   ),
-                  if (_addReminder) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Text(l10n.setTime),
-                        Switch(
-                          value: _reminderTime != null,
-                          onChanged: (v) => setState(() => _reminderTime = v ? TimeOfDay.now() : null),
-                        ),
-                      ],
+                  if (_addReminder && _reminderTime != null)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('⏰ ${_reminderTime!.format(context)}'),
+                      leading: const Icon(Icons.access_time),
+                      onTap: () async {
+                        final tm = await showTimeWheelPicker(context, initialTime: _reminderTime!);
+                        if (tm != null) setState(() => _reminderTime = tm);
+                      },
                     ),
-                    if (_reminderTime != null)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('⏰ ${_reminderTime!.format(context)}'),
-                        leading: const Icon(Icons.access_time),
-                        onTap: () async {
-                          final tm = await showTimeWheelPicker(context, initialTime: _reminderTime!);
-                          if (tm != null) setState(() => _reminderTime = tm);
-                        },
-                      ),
-                  ],
                   const SizedBox(height: 12),
                 ],
               ),
