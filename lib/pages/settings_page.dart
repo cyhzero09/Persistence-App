@@ -494,7 +494,8 @@ class SettingsPage extends ConsumerWidget {
       return;
     }
     final uri = Uri.parse(url);
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    // 强制用外部浏览器打开，避免被 GitHub 客户端或选择器拦截
+    final ok = await launchUrl(uri, mode: LaunchMode.browserApplication);
     if (!ok && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.downloadFromGitHub)),
