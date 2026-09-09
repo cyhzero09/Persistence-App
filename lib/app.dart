@@ -12,6 +12,20 @@ Locale _localeFromCode(String code) {
   return parts.length > 1 ? Locale(parts[0], parts[1]) : Locale(parts[0]);
 }
 
+/// 有背景图时让 Scaffold/AppBar/底栏透出背景
+ThemeData _applyTransparentBackground(ThemeData theme) {
+  return theme.copyWith(
+    scaffoldBackgroundColor: Colors.transparent,
+    appBarTheme: theme.appBarTheme.copyWith(
+      backgroundColor: Colors.transparent,
+      scrolledUnderElevation: 0,
+    ),
+    navigationBarTheme: theme.navigationBarTheme.copyWith(
+      backgroundColor: Colors.transparent,
+    ),
+  );
+}
+
 class DailyTrackerApp extends ConsumerStatefulWidget {
   const DailyTrackerApp({super.key});
 
@@ -25,6 +39,9 @@ class _DailyTrackerAppState extends ConsumerState<DailyTrackerApp> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
+    final hasBg = settings.initialized &&
+        settings.backgroundImage.isNotEmpty &&
+        settings.backgroundBytes != null;
     return MaterialApp(
       title: 'Daily Tracker',
       debugShowCheckedModeBanner: false,
@@ -32,15 +49,26 @@ class _DailyTrackerAppState extends ConsumerState<DailyTrackerApp> {
       supportedLocales: const [Locale('en'), Locale('zh'), Locale('zh', 'TW')],
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       themeMode: settings.brightness,
-      theme: ThemeData(
-        colorSchemeSeed: Color(settings.themeColor),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: Color(settings.themeColor),
-        useMaterial3: true,
-        brightness: Brightness.dark,
-      ),
+      theme: hasBg
+          ? _applyTransparentBackground(ThemeData(
+              colorSchemeSeed: Color(settings.themeColor),
+              useMaterial3: true,
+            ))
+          : ThemeData(
+              colorSchemeSeed: Color(settings.themeColor),
+              useMaterial3: true,
+            ),
+      darkTheme: hasBg
+          ? _applyTransparentBackground(ThemeData(
+              colorSchemeSeed: Color(settings.themeColor),
+              useMaterial3: true,
+              brightness: Brightness.dark,
+            ))
+          : ThemeData(
+              colorSchemeSeed: Color(settings.themeColor),
+              useMaterial3: true,
+              brightness: Brightness.dark,
+            ),
       builder: (context, child) {
         if (settings.initialized && !settings.languageChosen && !_languageDialogShown) {
           _languageDialogShown = true;
@@ -49,12 +77,33 @@ class _DailyTrackerAppState extends ConsumerState<DailyTrackerApp> {
             _showLanguageDialog(context);
           });
         }
-        return MediaQuery(
+        Widget effectiveChild = MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.linear(settings.fontSize),
           ),
           child: child!,
         );
+        if (hasBg) {
+          // 全局背景层垫底，页面内容浮于其上
+          effectiveChild = Stack(
+            children: [
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: settings.backgroundOpacity.clamp(0.0, 1.0),
+                    child: Image.memory(
+                      settings.backgroundBytes!,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+                ),
+              ),
+              effectiveChild,
+            ],
+          );
+        }
+        return effectiveChild;
       },
       home: const MainShell(),
     );

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' show Value;
@@ -18,6 +19,8 @@ import '../models/reminder.dart';
 import '../app_version.dart';
 import '../update_checker.dart';
 import '../l10n/generated/app_localizations.dart';
+import 'package:image_picker/image_picker.dart';
+import '../utils/background_image.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -110,6 +113,23 @@ class SettingsPage extends ConsumerWidget {
               ],
             ),
           ),
+          ListTile(
+            leading: settings.backgroundBytes != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.memory(
+                      settings.backgroundBytes!,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                    ),
+                  )
+                : const Icon(Icons.image),
+            title: Text(l10n.backgroundImage),
+            subtitle: Text('${(settings.backgroundOpacity * 100).toInt()}%'),
+            onTap: () => _showBackgroundPicker(context, ref),
+          ),
           const Divider(),
           const _SectionHeader(titleKey: 'language'),
           ListTile(
@@ -156,6 +176,113 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
         ],
+      ),
+    );
+  }
+
+  void _showBackgroundPicker(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final settings = ref.read(appSettingsProvider);
+    double opacity = settings.backgroundOpacity;
+    Uint8List? bytes = settings.backgroundBytes;
+
+    Future<void> pickImage() async {
+      final xfile = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        imageQuality: 85,
+      );
+      if (xfile == null) return;
+      final raw = await xfile.readAsBytes();
+      final processed = await processPickedImage(raw);
+      if (processed == null) return;
+      final ok = await ref.read(appSettingsProvider.notifier).setBackgroundImage(
+        base64Encode(processed),
+        bytes: processed,
+      );
+      if (!context.mounted) return;
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.imageSaveFailed)));
+        return;
+      }
+      bytes = processed;
+    }
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
+          title: Text(l10n.backgroundImage),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: double.maxFinite,
+                height: 140,
+                decoration: BoxDecoration(
+                  color: Theme.of(dialogCtx).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: bytes != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.memory(bytes!, fit: BoxFit.cover, gaplessPlayback: true),
+                      )
+                    : Center(child: Icon(Icons.image, size: 40, color: Theme.of(dialogCtx).colorScheme.outline)),
+              ),
+              const SizedBox(height: 12),
+              Text(l10n.backgroundOpacity),
+              Slider(
+                value: opacity.clamp(0.0, 1.0),
+                onChanged: bytes == null
+                    ? null
+                    : (v) {
+                        setDialogState(() => opacity = v);
+                        ref.read(appSettingsProvider.notifier).setBackgroundOpacity(v);
+                      },
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton.icon(
+                    onPressed: () async {
+                      await pickImage();
+                      if (dialogCtx.mounted) setDialogState(() {});
+                    },
+                    icon: const Icon(Icons.image),
+                    label: Text(l10n.chooseImage),
+                  ),
+                  TextButton.icon(
+                    onPressed: bytes == null
+                        ? null
+                        : () async {
+                            final ok = await ref
+                                .read(appSettingsProvider.notifier)
+                                .setBackgroundImage('');
+                            if (dialogCtx.mounted) {
+                              if (!ok) {
+                                ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                                  SnackBar(content: Text(l10n.imageSaveFailed)),
+                                );
+                              } else {
+                                setDialogState(() => bytes = null);
+                              }
+                            }
+                          },
+                    icon: const Icon(Icons.delete_outline),
+                    label: Text(l10n.clearImage),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text(l10n.save),
+            ),
+          ],
+        ),
       ),
     );
   }
