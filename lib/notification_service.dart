@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'models/reminder.dart';
@@ -15,16 +16,27 @@ class NotificationService {
   Future<void> init() async {
     if (_initialized) return;
     tz_data.initializeTimeZones();
-    // timezone 包的 tz.local 默认是 UTC。若不显式设为设备本地时区，
-    // 定时通知会按 UTC 绝对时间计算触发点，导致在非 UTC 时区（如 +8）推迟数小时甚至误判为不触发。
-    // 这里直接使用设备当前的 UTC 偏移量构建本地时区，保证任何设备上都正确。
-    final localOffset = DateTime.now().timeZoneOffset;
-    tz.setLocalLocation(tz.Location(
-      'LOCAL',
-      [],
-      [],
-      [tz.TimeZone(localOffset.inMilliseconds, isDst: false, abbreviation: 'LOCAL')],
-    ));
+    // 必须使用设备真实的 IANA 时区名（如 'Asia/Shanghai'）设置本地时区：
+    // zonedSchedule 会把 location.name 传给 Android 原生 java.time.ZoneId.of() 解析，
+    // 自定义名字（如 'LOCAL'）会导致 "Unknown time-zone ID" 异常，闹钟永远注册不上。
+    try {
+      final timeZoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+    } catch (_) {
+      // 兜底：拿不到 IANA 名时用 UTC 偏移构建固定时区。
+      // 命名 "GMT+08:00" 是 java.time.ZoneId.of 的合法格式（固定偏移、无 DST）。
+      final offset = DateTime.now().timeZoneOffset;
+      final sign = offset.isNegative ? '-' : '+';
+      final h = offset.inHours.abs().toString().padLeft(2, '0');
+      final m = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+      final name = 'GMT$sign$h:$m';
+      tz.setLocalLocation(tz.Location(
+        name,
+        [],
+        [],
+        [tz.TimeZone(offset.inMilliseconds, isDst: false, abbreviation: name)],
+      ));
+    }
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings();
     const settings = InitializationSettings(android: androidSettings, iOS: iosSettings);
@@ -50,6 +62,31 @@ class NotificationService {
     if (!_initialized) await init();
     if (kIsWeb) return;
 
+    try {
+      await _scheduleReminder(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+        repeatWeekdays: repeatWeekdays,
+        channelName: channelName,
+        channelDescription: channelDescription,
+      );
+    } catch (e) {
+      // 调度失败必须留下日志，否则到点不响时无从排查
+      debugPrint('scheduleReminder id=$id FAILED: $e');
+    }
+  }
+
+  Future<void> _scheduleReminder({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    String? repeatWeekdays,
+    required String channelName,
+    required String channelDescription,
+  }) async {
     final now = DateTime.now();
     // 计算实际触发的本地时间点，以及是否需要按周/按天循环。
     final weekdaySet = _parseWeekdays(repeatWeekdays);

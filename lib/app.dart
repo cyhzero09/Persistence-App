@@ -35,6 +35,7 @@ class DailyTrackerApp extends ConsumerStatefulWidget {
 
 class _DailyTrackerAppState extends ConsumerState<DailyTrackerApp> {
   bool _languageDialogShown = false;
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +46,7 @@ class _DailyTrackerAppState extends ConsumerState<DailyTrackerApp> {
     return MaterialApp(
       title: 'Daily Tracker',
       debugShowCheckedModeBanner: false,
+      navigatorKey: _navigatorKey,
       locale: _localeFromCode(settings.language),
       supportedLocales: const [Locale('en'), Locale('zh'), Locale('zh', 'TW')],
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -74,7 +76,9 @@ class _DailyTrackerAppState extends ConsumerState<DailyTrackerApp> {
           _languageDialogShown = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
-            _showLanguageDialog(context);
+            // builder 的 context 位于 Navigator 之上，showDialog 必须用 navigator 的 context
+            final navContext = _navigatorKey.currentContext;
+            if (navContext != null) _showLanguageDialog(navContext);
           });
         }
         Widget effectiveChild = MediaQuery(
