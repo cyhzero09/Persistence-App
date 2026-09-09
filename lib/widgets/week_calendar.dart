@@ -51,7 +51,8 @@ class WeekCalendar extends StatelessWidget {
       );
     }
 
-    final sunday = _sundayOf(today);
+    // 三周窗口以选中日期所在周为中间行，点选前后周日期时窗口跟随
+    final sunday = _sundayOf(selectedDate);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [

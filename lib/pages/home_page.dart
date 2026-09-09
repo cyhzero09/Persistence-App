@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../widgets/calendar_widget.dart';
+import '../widgets/week_calendar.dart';
 import '../database/database.dart' hide CheckInCategory, CheckInRecord, DiaryEntry, Reminder;
 import '../providers/database_provider.dart';
 import '../providers/check_in_provider.dart';
@@ -96,13 +96,13 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       body: Column(
         children: [
           activeDatesAsync.when(
-            data: (dates) => CalendarWidget(
+            data: (dates) => WeekCalendar(
               selectedDate: _selectedDate,
               markedDates: _parseMarkedDates(dates),
-              navigable: _expanded,
+              showFullMonth: _expanded,
               onDateSelected: (d) => setState(() => _selectedDate = d),
             ),
-            loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
+            loading: () => const SizedBox(height: 100, child: Center(child: CircularProgressIndicator())),
             error: (e, _) => Center(child: Text('$e')),
           ),
           const Divider(height: 1),
