@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:path_provider/path_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../database/database.dart' hide CheckInCategory, CheckInRecord, DiaryEntry, Reminder;
 import '../providers/database_provider.dart';
 import '../providers/check_in_provider.dart';
@@ -21,6 +20,7 @@ import '../update_checker.dart';
 import '../l10n/generated/app_localizations.dart';
 import 'package:image_picker/image_picker.dart';
 import '../utils/background_image.dart';
+import '../utils/browser_launcher.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -493,9 +493,7 @@ class SettingsPage extends ConsumerWidget {
       }
       return;
     }
-    final uri = Uri.parse(url);
-    // 强制用外部浏览器打开，避免被 GitHub 客户端或选择器拦截
-    final ok = await launchUrl(uri, mode: LaunchMode.browserApplication);
+    final ok = await openInBrowser(url);
     if (!ok && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.downloadFromGitHub)),
