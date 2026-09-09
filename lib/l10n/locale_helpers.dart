@@ -32,12 +32,12 @@ String listSeparatorOf(BuildContext context) {
   return _isChinese(context) ? '、' : ', ';
 }
 
-/// Localized home page app-bar date title.
+/// Localized home page app-bar date title (slash-style date).
 String homeDateTitle(BuildContext context, DateTime date) {
   if (_isChinese(context)) {
-    return DateFormat('M 月 d 日 EEEE', intlLocaleOf(context)).format(date);
+    return DateFormat('yyyy/MM/dd EEEE', intlLocaleOf(context)).format(date);
   }
-  return DateFormat.yMMMMEEEEd(intlLocaleOf(context)).format(date);
+  return DateFormat('EEE, MM/dd/yyyy', intlLocaleOf(context)).format(date);
 }
 
 /// Short weekday label for a [DateTime] (used in full-month view).
