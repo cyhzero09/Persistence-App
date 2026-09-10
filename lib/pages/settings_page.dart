@@ -580,13 +580,27 @@ class _BatteryOptimizationTile extends StatefulWidget {
   State<_BatteryOptimizationTile> createState() => _BatteryOptimizationTileState();
 }
 
-class _BatteryOptimizationTileState extends State<_BatteryOptimizationTile> {
+class _BatteryOptimizationTileState extends State<_BatteryOptimizationTile>
+    with WidgetsBindingObserver {
   late Future<bool> _future;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _future = isIgnoringBatteryOptimization();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 系统请求对话框关闭回到应用后重新查询白名单状态
+    if (state == AppLifecycleState.resumed) _reload();
   }
 
   void _reload() {
