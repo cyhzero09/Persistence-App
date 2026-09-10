@@ -8,6 +8,8 @@
         USE_EXACT_ALARM 仅 API32+ 生效，低版本走 SCHEDULE_EXACT_ALARM。 -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- 引导用户把应用加入电池优化白名单（国产 ROM 后台冻结会导致提醒延迟到下次打开应用） -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <application
         android:label="Persistence"
         android:name="${applicationName}"

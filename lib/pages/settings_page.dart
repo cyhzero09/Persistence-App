@@ -21,6 +21,7 @@ import '../l10n/generated/app_localizations.dart';
 import 'package:image_picker/image_picker.dart';
 import '../utils/background_image.dart';
 import '../utils/browser_launcher.dart';
+import '../utils/battery_optimization.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -130,6 +131,7 @@ class SettingsPage extends ConsumerWidget {
             subtitle: Text('${(settings.backgroundOpacity * 100).toInt()}%'),
             onTap: () => _showBackgroundPicker(context, ref),
           ),
+          const _BatteryOptimizationTile(),
           const Divider(),
           const _SectionHeader(titleKey: 'language'),
           ListTile(
@@ -567,6 +569,53 @@ class SettingsPage extends ConsumerWidget {
         );
       }
     }
+  }
+}
+
+/// 电池优化白名单入口：后台被 ROM 冻结会导致提醒延迟到下次打开应用才触发。
+class _BatteryOptimizationTile extends StatefulWidget {
+  const _BatteryOptimizationTile();
+
+  @override
+  State<_BatteryOptimizationTile> createState() => _BatteryOptimizationTileState();
+}
+
+class _BatteryOptimizationTileState extends State<_BatteryOptimizationTile> {
+  late Future<bool> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = isIgnoringBatteryOptimization();
+  }
+
+  void _reload() {
+    setState(() => _future = isIgnoringBatteryOptimization());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return FutureBuilder<bool>(
+      future: _future,
+      builder: (context, snap) {
+        final ok = snap.data ?? true;
+        return ListTile(
+          leading: Icon(
+            ok ? Icons.battery_saver : Icons.battery_alert,
+            color: ok ? null : Theme.of(context).colorScheme.error,
+          ),
+          title: Text(l10n.batteryOptimization),
+          subtitle: Text(ok ? l10n.batteryOptimizationOk : l10n.batteryOptimizationBlocked),
+          onTap: ok
+              ? null
+              : () async {
+                  await requestIgnoreBatteryOptimization();
+                  _reload();
+                },
+        );
+      },
+    );
   }
 }
 
