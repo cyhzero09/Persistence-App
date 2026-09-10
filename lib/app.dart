@@ -35,6 +35,7 @@ class DailyTrackerApp extends ConsumerStatefulWidget {
 
 class _DailyTrackerAppState extends ConsumerState<DailyTrackerApp> {
   bool _languageDialogShown = false;
+  bool _permissionWizardRun = false;
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   @override

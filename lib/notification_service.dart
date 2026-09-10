@@ -4,6 +4,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'models/reminder.dart';
+import 'utils/battery_optimization.dart' as bat;
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._();
@@ -12,6 +13,10 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+
+  /// Android 平台实现（供权限检查/请求使用；Web 返回 null）
+  AndroidFlutterLocalNotificationsPlugin? get androidImpl =>
+      kIsWeb ? null : _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
   Future<void> init() async {
     if (_initialized) return;
@@ -224,5 +229,36 @@ class NotificationService {
   Future<void> cancelReminder(int id) async {
     if (kIsWeb) return;
     await _plugin.cancel(id);
+  }
+
+  /// 通知权限是否已授予（Android）。
+  Future<bool> areNotificationsEnabled() async {
+    if (kIsWeb) return true;
+    return await androidImpl?.areNotificationsEnabled() ?? true;
+  }
+
+  /// 请求通知权限（Android 13+ 首次会弹系统授权框）。
+  Future<bool> requestNotificationsPermission() async {
+    if (kIsWeb) return true;
+    return await androidImpl?.requestNotificationsPermission() ?? true;
+  }
+
+  /// 请求精确闹钟权限（Android 12+ 会引导到系统设置）。
+  Future<bool> requestExactAlarmPermission() async {
+    if (kIsWeb) return true;
+    try {
+      await androidImpl?.requestExactAlarmsPermission();
+    } catch (_) {}
+    return canScheduleExact();
+  }
+
+  /// 是否在电池优化白名单中。
+  Future<bool> isIgnoringBatteryOptimization() async {
+    return await bat.isIgnoringBatteryOptimization();
+  }
+
+  /// 请求加入电池优化白名单，返回是否已加入。
+  Future<bool> requestIgnoreBatteryOptimization() async {
+    return await bat.requestIgnoreBatteryOptimization();
   }
 }
