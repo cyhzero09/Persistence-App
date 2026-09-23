@@ -5,14 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
-import '../database/database.dart' hide CheckInCategory, CheckInRecord, DiaryEntry, Reminder;
 import '../providers/database_provider.dart';
 import '../providers/check_in_provider.dart';
 import '../providers/diary_provider.dart';
 import '../providers/reminder_provider.dart';
 import '../providers/app_settings_provider.dart';
-import '../models/check_in_category.dart';
-import '../models/reminder.dart';
 import '../app_version.dart';
 import '../update_checker.dart';
 import '../cloud_service.dart';
@@ -507,7 +504,7 @@ class SettingsPage extends ConsumerWidget {
       final db = ref.read(databaseProvider);
       await applyBackupJson(db, jsonStr);
       // 导入回来的提醒必须重新排进系统闹钟，否则不会响
-      await resyncRemindersFromDb(db);
+      await NotificationService().resyncFromDatabase(db);
 
       ref.invalidate(categoriesProvider);
       ref.invalidate(checkInRecordDatesProvider);
@@ -833,7 +830,7 @@ class _AccountSectionState extends ConsumerState<_AccountSection> {
       if (jsonStr == null) throw const CloudException('noBackup');
       await applyBackupJson(db, jsonStr);
       // 恢复回来的提醒必须重新排进系统闹钟，否则不会响
-      await resyncRemindersFromDb(db);
+      await NotificationService().resyncFromDatabase(db);
     }, l10n.restoreSuccess);
     ref.invalidate(categoriesProvider);
     ref.invalidate(checkInRecordDatesProvider);
@@ -899,39 +896,6 @@ class _AccountSectionState extends ConsumerState<_AccountSection> {
       ],
     );
   }
-}
-
-/// 把库里所有未完成的提醒 + 开启了提醒的打卡项目重新排进系统闹钟。
-/// 本地导入/云端恢复之后必须调用，否则恢复回来的提醒不会触发。
-Future<void> resyncRemindersFromDb(AppDatabase db) async {
-  final rows = await db.select(db.reminders).get();
-  final catRows = await db.select(db.checkInCategories).get();
-  await NotificationService().resyncPending(
-    rows
-        .map((r) => Reminder(
-              id: r.id,
-              title: r.title,
-              dateTime: r.reminderDateTime,
-              repeatWeekdays: r.repeatWeekdays,
-              repeatEndDate: r.repeatEndDate,
-              categoryId: r.categoryId,
-              isCompleted: r.isCompleted,
-            ))
-        .toList(),
-    categories: catRows
-        .map((c) => CheckInCategory(
-              id: c.id,
-              name: c.name,
-              emoji: c.emoji,
-              description: c.description,
-              startTime: c.startTime,
-              endTime: c.endTime,
-              repeatWeekdays: c.repeatWeekdays,
-              reminderTime: c.reminderTime,
-              isDefault: c.isDefault,
-            ))
-        .toList(),
-  );
 }
 
 class _SectionHeader extends StatelessWidget {

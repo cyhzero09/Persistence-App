@@ -282,6 +282,47 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     ref.invalidate(checkInRecordsForDateProvider(dateStr));
     ref.invalidate(checkInRecordsForCategoryProvider(categoryId));
     ref.invalidate(checkInRecordDatesProvider);
+    // 打卡状态变了，同步今天这一次提醒（打完就跳过，取消打卡就排回来）
+    await _syncCheckInReminder(categoryId, dateStr, completed);
+  }
+
+  /// 打卡/取消打卡后同步"今天"的打卡提醒：
+  /// - 打卡完成 → 跳过今天还没到的那一次（顺延到下一次）
+  /// - 取消打卡 → 把今天那一次重新排回来
+  /// 只有操作今天的记录才影响提醒；提醒同步失败不能影响打卡本身。
+  Future<void> _syncCheckInReminder(int categoryId, String dateStr, bool completed) async {
+    try {
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      if (dateStr != todayStr) return;
+      final db = ref.read(databaseProvider);
+      final rows = await (db.select(db.checkInCategories)
+            ..where((t) => t.id.equals(categoryId)))
+          .get();
+      if (rows.isEmpty) return;
+      final cat = rows.first;
+      final time = cat.reminderTime;
+      if (time == null) return;
+      final service = NotificationService();
+      if (completed) {
+        await service.skipTodayCheckInReminder(
+          categoryId: cat.id,
+          emoji: cat.emoji,
+          name: cat.name,
+          reminderTime: time,
+          repeatWeekdays: cat.repeatWeekdays,
+        );
+      } else {
+        await service.scheduleCheckInReminder(
+          categoryId: cat.id,
+          emoji: cat.emoji,
+          name: cat.name,
+          time: time,
+          repeatWeekdays: cat.repeatWeekdays,
+        );
+      }
+    } catch (_) {
+      // 提醒同步失败不应影响打卡操作
+    }
   }
 
   Future<void> _showNoteDialog(int categoryId, String dateStr, dynamic existing) async {

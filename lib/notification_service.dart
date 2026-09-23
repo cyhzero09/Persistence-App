@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
+import 'database/database.dart' hide Reminder, CheckInCategory, CheckInRecord, DiaryEntry;
 import 'models/reminder.dart';
 import 'models/check_in_category.dart';
 import 'utils/battery_optimization.dart' as bat;
@@ -63,6 +64,7 @@ class NotificationService {
     required DateTime scheduledDate,
     String? repeatWeekdays,
     String? repeatEndDate,
+    DateTime? earliest,
     String channelName = 'Reminders',
     String channelDescription = 'Daily check-in reminders',
   }) async {
@@ -77,6 +79,7 @@ class NotificationService {
         scheduledDate: scheduledDate,
         repeatWeekdays: repeatWeekdays,
         repeatEndDate: repeatEndDate,
+        earliest: earliest,
         channelName: channelName,
         channelDescription: channelDescription,
       );
@@ -93,10 +96,13 @@ class NotificationService {
     required DateTime scheduledDate,
     String? repeatWeekdays,
     String? repeatEndDate,
+    DateTime? earliest,
     required String channelName,
     required String channelDescription,
   }) async {
-    final now = DateTime.now();
+    // earliest：从该时刻之后找下一次触发（默认"现在"）。用于"打卡后跳过今天那次"，
+    // 传明天 0 点即可让下一次落在今天之后。
+    final now = earliest ?? DateTime.now();
     // 计算实际触发的本地时间点，以及是否需要按周/按天循环。
     final weekdaySet = _parseWeekdays(repeatWeekdays);
     DateTime fireAt = scheduledDate;
@@ -214,12 +220,14 @@ class NotificationService {
   /// 提醒属于打卡项目自身（不在 reminders 表里建记录）：开关打开就按
   /// [repeatWeekdays] 每周循环触发，直到开关关闭或项目被删除。
   /// 标题固定为「emoji + 名称」、无正文，这样启动重建后的通知样式与创建时完全一致。
+  /// [skipToday] = true 表示"今天已打卡"，下一次从明天开始找。
   Future<void> scheduleCheckInReminder({
     required int categoryId,
     required String emoji,
     required String name,
     required String time,
     String? repeatWeekdays,
+    bool skipToday = false,
   }) async {
     final parts = time.split(':');
     if (parts.length != 2) return;
@@ -236,6 +244,39 @@ class NotificationService {
       repeatWeekdays: (repeatWeekdays == null || repeatWeekdays.trim().isEmpty)
           ? '0,1,2,3,4,5,6'
           : repeatWeekdays,
+      // 从明天 0 点开始找 → 下一次必然跳过今天
+      earliest: skipToday
+          ? DateTime(now.year, now.month, now.day).add(const Duration(days: 1))
+          : null,
+    );
+  }
+
+  /// 打卡完成后调用：把"今天"这一次提醒顺延掉。
+  /// 今天这个点已经过了（已经响过）就什么都不做 —— 保持原有循环即可。
+  /// 注意不能直接取消：取消会把每周循环一起干掉，所以这里是"重排到下一次"。
+  Future<void> skipTodayCheckInReminder({
+    required int categoryId,
+    required String emoji,
+    required String name,
+    required String? reminderTime,
+    required String? repeatWeekdays,
+  }) async {
+    final time = reminderTime;
+    if (time == null || !time.contains(':')) return;
+    final parts = time.split(':');
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return;
+    final now = DateTime.now();
+    final todayAt = DateTime(now.year, now.month, now.day, hour, minute);
+    if (!todayAt.isAfter(now)) return;
+    await scheduleCheckInReminder(
+      categoryId: categoryId,
+      emoji: emoji,
+      name: name,
+      time: time,
+      repeatWeekdays: repeatWeekdays,
+      skipToday: true,
     );
   }
 
@@ -247,9 +288,12 @@ class NotificationService {
 
   /// 启动时调用：清空旧的（可能是错误时区/错误调度模式的）调度，并按当前逻辑重建
   /// 所有尚未完成的提醒 + 所有开启了提醒的打卡项目。这样修复后无需重装也能恢复正常触发。
+  /// [completedCheckInToday] 是"今天已完成打卡"的项目 id，这些项目今天那一次要跳过，
+  /// 否则会出现"已经打过卡了打开 App 又被提醒一次"。
   Future<void> resyncPending(
     List<Reminder> reminders, {
     List<CheckInCategory> categories = const [],
+    Set<int> completedCheckInToday = const {},
   }) async {
     if (_initialized == false) await init();
     if (kIsWeb) return;
@@ -282,12 +326,59 @@ class NotificationService {
           name: c.name,
           time: c.reminderTime!,
           repeatWeekdays: c.repeatWeekdays,
+          skipToday: completedCheckInToday.contains(c.id),
         );
       } catch (e) {
         // ignore: avoid_print
         debugPrint('resync check-in reminder ${c.id} failed: $e');
       }
     }
+  }
+
+  /// 从数据库读出所有待排定项并重建系统闹钟：
+  /// 手动提醒（未完成的）+ 所有开启了打卡提醒的项目（今天已打卡的跳过今天那次）。
+  /// 启动时、导入备份后、从云端恢复后统一走这里，避免各写一遍映射逻辑。
+  Future<void> resyncFromDatabase(AppDatabase db) async {
+    final rows = await db.select(db.reminders).get();
+    final catRows = await db.select(db.checkInCategories).get();
+
+    final now = DateTime.now();
+    final todayStr = '${now.year.toString().padLeft(4, '0')}'
+        '-${now.month.toString().padLeft(2, '0')}'
+        '-${now.day.toString().padLeft(2, '0')}';
+    final todayRows = await (db.select(db.checkInRecords)
+          ..where((t) => t.date.equals(todayStr)))
+        .get();
+    final completedToday =
+        todayRows.where((r) => r.isCompleted).map((r) => r.categoryId).toSet();
+
+    await resyncPending(
+      rows
+          .map((r) => Reminder(
+                id: r.id,
+                title: r.title,
+                dateTime: r.reminderDateTime,
+                repeatWeekdays: r.repeatWeekdays,
+                repeatEndDate: r.repeatEndDate,
+                categoryId: r.categoryId,
+                isCompleted: r.isCompleted,
+              ))
+          .toList(),
+      categories: catRows
+          .map((c) => CheckInCategory(
+                id: c.id,
+                name: c.name,
+                emoji: c.emoji,
+                description: c.description,
+                startTime: c.startTime,
+                endTime: c.endTime,
+                repeatWeekdays: c.repeatWeekdays,
+                reminderTime: c.reminderTime,
+                isDefault: c.isDefault,
+              ))
+          .toList(),
+      completedCheckInToday: completedToday,
+    );
   }
 
   /// 解析 repeatWeekdays（0=周一 … 6=周日，逗号分隔）为 {1=周一 … 7=周日}；
