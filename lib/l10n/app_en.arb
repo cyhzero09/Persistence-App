@@ -37,6 +37,7 @@
   "endTimeLabel": "End time",
   "repeatDays": "Repeat days:",
   "addReminder": "Add Reminder",
+  "checkInReminder": "Check-in reminder",
   "setTime": "Set time",
   "cancel": "Cancel",
   "add": "Add",

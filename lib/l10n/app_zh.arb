@@ -37,6 +37,7 @@
   "endTimeLabel": "结束时间",
   "repeatDays": "重复天数：",
   "addReminder": "添加提醒",
+  "checkInReminder": "打卡提醒",
   "setTime": "设置时间",
   "cancel": "取消",
   "add": "添加",

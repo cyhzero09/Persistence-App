@@ -6,6 +6,9 @@ class CheckInCategory {
   final String? startTime;
   final String? endTime;
   final String? repeatWeekdays;
+
+  /// 打卡提醒时间（HH:mm）；null = 未开启提醒
+  final String? reminderTime;
   final bool isDefault;
 
   const CheckInCategory({
@@ -16,6 +19,7 @@ class CheckInCategory {
     this.startTime,
     this.endTime,
     this.repeatWeekdays,
+    this.reminderTime,
     this.isDefault = false,
   });
 
@@ -27,6 +31,7 @@ class CheckInCategory {
     'startTime': startTime,
     'endTime': endTime,
     'repeatWeekdays': repeatWeekdays,
+    'reminderTime': reminderTime,
     'isDefault': isDefault,
   };
 
@@ -38,8 +43,12 @@ class CheckInCategory {
     startTime: json['startTime'] as String?,
     endTime: json['endTime'] as String?,
     repeatWeekdays: json['repeatWeekdays'] as String?,
+    reminderTime: json['reminderTime'] as String?,
     isDefault: json['isDefault'] as bool? ?? false,
   );
 
   bool get isRepeating => repeatWeekdays != null && repeatWeekdays!.isNotEmpty;
+
+  /// 是否开启了打卡提醒
+  bool get hasReminder => reminderTime != null && reminderTime!.isNotEmpty;
 }

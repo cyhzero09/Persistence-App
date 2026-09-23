@@ -8,6 +8,10 @@ class CheckInCategories extends Table {
   TextColumn get startTime => text().nullable()();
   TextColumn get endTime => text().nullable()();
   TextColumn get repeatWeekdays => text().nullable()();
+  /// 打卡提醒时间（HH:mm）。null = 未开启提醒。
+  /// 提醒属于打卡项目自身：打开开关就按 repeatWeekdays 每周循环触发，
+  /// 不在 reminders 表里另建一条记录。
+  TextColumn get reminderTime => text().nullable()();
   BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
 }
 

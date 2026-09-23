@@ -28,6 +28,7 @@ Future<String> buildBackupJson(AppDatabase db) async {
               startTime: r.startTime,
               endTime: r.endTime,
               repeatWeekdays: r.repeatWeekdays,
+              reminderTime: r.reminderTime,
               isDefault: r.isDefault,
             ).toJson())
         .toList(),
@@ -85,6 +86,7 @@ Future<void> applyBackupJson(AppDatabase db, String jsonStr) async {
           startTime: m.startTime != null ? Value(m.startTime!) : const Value.absent(),
           endTime: m.endTime != null ? Value(m.endTime!) : const Value.absent(),
           repeatWeekdays: m.repeatWeekdays != null ? Value(m.repeatWeekdays!) : const Value.absent(),
+          reminderTime: m.reminderTime != null ? Value(m.reminderTime!) : const Value.absent(),
           isDefault: Value(m.isDefault),
         ));
   }

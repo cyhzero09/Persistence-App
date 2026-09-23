@@ -11,6 +11,7 @@ import '../providers/check_in_provider.dart';
 import '../providers/diary_provider.dart';
 import '../providers/reminder_provider.dart';
 import '../providers/app_settings_provider.dart';
+import '../models/check_in_category.dart';
 import '../models/reminder.dart';
 import '../app_version.dart';
 import '../update_checker.dart';
@@ -900,10 +901,11 @@ class _AccountSectionState extends ConsumerState<_AccountSection> {
   }
 }
 
-/// 把库里所有未完成的提醒重新排进系统闹钟。
+/// 把库里所有未完成的提醒 + 开启了提醒的打卡项目重新排进系统闹钟。
 /// 本地导入/云端恢复之后必须调用，否则恢复回来的提醒不会触发。
 Future<void> resyncRemindersFromDb(AppDatabase db) async {
   final rows = await db.select(db.reminders).get();
+  final catRows = await db.select(db.checkInCategories).get();
   await NotificationService().resyncPending(
     rows
         .map((r) => Reminder(
@@ -914,6 +916,19 @@ Future<void> resyncRemindersFromDb(AppDatabase db) async {
               repeatEndDate: r.repeatEndDate,
               categoryId: r.categoryId,
               isCompleted: r.isCompleted,
+            ))
+        .toList(),
+    categories: catRows
+        .map((c) => CheckInCategory(
+              id: c.id,
+              name: c.name,
+              emoji: c.emoji,
+              description: c.description,
+              startTime: c.startTime,
+              endTime: c.endTime,
+              repeatWeekdays: c.repeatWeekdays,
+              reminderTime: c.reminderTime,
+              isDefault: c.isDefault,
             ))
         .toList(),
   );

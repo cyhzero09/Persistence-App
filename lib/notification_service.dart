@@ -4,6 +4,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'models/reminder.dart';
+import 'models/check_in_category.dart';
 import 'utils/battery_optimization.dart' as bat;
 
 class NotificationService {
@@ -203,9 +204,53 @@ class NotificationService {
     }
   }
 
+  /// 打卡提醒的通知 id 命名空间，与 reminders 表的自增 id 隔开，避免互相覆盖。
+  static const int _checkInIdBase = 1000000;
+
+  /// 某个打卡项目的提醒通知 id。
+  int checkInNotificationId(int categoryId) => _checkInIdBase + categoryId;
+
+  /// 排定/更新某个打卡项目的提醒。
+  /// 提醒属于打卡项目自身（不在 reminders 表里建记录）：开关打开就按
+  /// [repeatWeekdays] 每周循环触发，直到开关关闭或项目被删除。
+  /// 标题固定为「emoji + 名称」、无正文，这样启动重建后的通知样式与创建时完全一致。
+  Future<void> scheduleCheckInReminder({
+    required int categoryId,
+    required String emoji,
+    required String name,
+    required String time,
+    String? repeatWeekdays,
+  }) async {
+    final parts = time.split(':');
+    if (parts.length != 2) return;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return;
+    final now = DateTime.now();
+    await scheduleReminder(
+      id: checkInNotificationId(categoryId),
+      title: '$emoji $name',
+      body: '',
+      scheduledDate: DateTime(now.year, now.month, now.day, hour, minute),
+      // 项目没有勾选星期时按每天处理，避免退化成一次性提醒
+      repeatWeekdays: (repeatWeekdays == null || repeatWeekdays.trim().isEmpty)
+          ? '0,1,2,3,4,5,6'
+          : repeatWeekdays,
+    );
+  }
+
+  /// 取消某个打卡项目的提醒（关闭开关或删除项目时调用）。
+  Future<void> cancelCheckInReminder(int categoryId) async {
+    if (kIsWeb) return;
+    await _plugin.cancel(checkInNotificationId(categoryId));
+  }
+
   /// 启动时调用：清空旧的（可能是错误时区/错误调度模式的）调度，并按当前逻辑重建
-  /// 所有尚未完成的提醒。这样修复后无需重装也能恢复正常触发。
-  Future<void> resyncPending(List<Reminder> reminders) async {
+  /// 所有尚未完成的提醒 + 所有开启了提醒的打卡项目。这样修复后无需重装也能恢复正常触发。
+  Future<void> resyncPending(
+    List<Reminder> reminders, {
+    List<CheckInCategory> categories = const [],
+  }) async {
     if (_initialized == false) await init();
     if (kIsWeb) return;
     // 先清除所有旧调度，避免沿用旧版本错误时区/重复的取消残留。
@@ -226,6 +271,21 @@ class NotificationService {
         // 单条失败不影响其余提醒的重建
         // ignore: avoid_print
         debugPrint('resync reminder ${r.id} failed: $e');
+      }
+    }
+    for (final c in categories) {
+      if (!c.hasReminder) continue;
+      try {
+        await scheduleCheckInReminder(
+          categoryId: c.id,
+          emoji: c.emoji,
+          name: c.name,
+          time: c.reminderTime!,
+          repeatWeekdays: c.repeatWeekdays,
+        );
+      } catch (e) {
+        // ignore: avoid_print
+        debugPrint('resync check-in reminder ${c.id} failed: $e');
       }
     }
   }

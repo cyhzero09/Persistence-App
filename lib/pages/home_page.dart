@@ -310,6 +310,8 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
     final db = ref.read(databaseProvider);
     await (db.delete(db.checkInRecords)..where((t) => t.categoryId.equals(id))).go();
     await (db.delete(db.checkInCategories)..where((t) => t.id.equals(id))).go();
+    // 项目删了，它自带的打卡提醒也要取消
+    unawaited(NotificationService().cancelCheckInReminder(id));
     ref.invalidate(categoriesProvider);
     ref.invalidate(checkInRecordsForCategoryProvider(id));
     ref.invalidate(checkInRecordDatesProvider);
