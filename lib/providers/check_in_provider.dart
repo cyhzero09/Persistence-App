@@ -15,6 +15,8 @@ final categoriesProvider = FutureProvider<List<CheckInCategory>>((ref) async {
     startTime: r.startTime,
     endTime: r.endTime,
     repeatWeekdays: r.repeatWeekdays,
+    // 漏了这行的话，编辑弹窗读到的提醒永远是"未开启"
+    reminderTime: r.reminderTime,
     isDefault: r.isDefault,
   )).toList();
 });
