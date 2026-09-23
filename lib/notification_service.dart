@@ -61,6 +61,7 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
     String? repeatWeekdays,
+    String? repeatEndDate,
     String channelName = 'Reminders',
     String channelDescription = 'Daily check-in reminders',
   }) async {
@@ -74,6 +75,7 @@ class NotificationService {
         body: body,
         scheduledDate: scheduledDate,
         repeatWeekdays: repeatWeekdays,
+        repeatEndDate: repeatEndDate,
         channelName: channelName,
         channelDescription: channelDescription,
       );
@@ -89,6 +91,7 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
     String? repeatWeekdays,
+    String? repeatEndDate,
     required String channelName,
     required String channelDescription,
   }) async {
@@ -107,9 +110,18 @@ class NotificationService {
         components = DateTimeComponents.dayOfWeekAndTime;
         fireAt = _nextWeekdayOccurrence(now, scheduledDate, weekdaySet);
       }
+      // 重复截止日：晚于截止日的下一次触发不再排定（原先该字段被存下但从未生效）
+      final end = _parseEndDate(repeatEndDate);
+      if (end != null && _dateOnly(fireAt).isAfter(end)) {
+        await _plugin.cancel(id);
+        return;
+      }
     } else {
       // 一次性提醒：时间已过则无需再触发。
-      if (scheduledDate.isBefore(now)) return;
+      if (scheduledDate.isBefore(now)) {
+        await _plugin.cancel(id);
+        return;
+      }
     }
 
     final androidDetails = AndroidNotificationDetails(
@@ -142,20 +154,42 @@ class NotificationService {
     );
   }
 
-  /// 返回当前设备可用的 Android 调度模式：优先精确，无法精确则退回不精确。
+  /// 返回当前设备可用的 Android 调度模式。
+  /// 优先 alarmClock：系统把它当"闹钟"对待（最不容易被国产 ROM 的后台冻结拦下），
+  /// 其次 exactAllowWhileIdle，最后退回 inexactAllowWhileIdle（会被 Doze/冻结延迟）。
   Future<AndroidScheduleMode> _scheduleMode() async {
     if (kIsWeb) return AndroidScheduleMode.inexact;
-    final android =
-        _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    return await canScheduleExact()
+        ? AndroidScheduleMode.alarmClock
+        : AndroidScheduleMode.inexactAllowWhileIdle;
+  }
+
+  /// 当前调度模式的可读名称（供设置页诊断展示）。
+  Future<String> scheduleModeName() async {
+    if (kIsWeb) return 'unsupported';
+    return await canScheduleExact() ? 'alarmClock' : 'inexact';
+  }
+
+  /// 当前已注册到系统的提醒条数（供设置页诊断展示）。
+  Future<int> pendingCount() async {
+    if (kIsWeb) return 0;
     try {
-      final canExact = await android?.canScheduleExactNotifications() ?? false;
-      return canExact
-          ? AndroidScheduleMode.exactAllowWhileIdle
-          : AndroidScheduleMode.inexactAllowWhileIdle;
+      final pending = await _plugin.pendingNotificationRequests();
+      return pending.length;
     } catch (_) {
-      return AndroidScheduleMode.inexactAllowWhileIdle;
+      return 0;
     }
   }
+
+  /// 解析重复截止日（yyyy-MM-dd），非法或为空返回 null。
+  DateTime? _parseEndDate(String? repeatEndDate) {
+    if (repeatEndDate == null || repeatEndDate.trim().isEmpty) return null;
+    final d = DateTime.tryParse(repeatEndDate.trim());
+    if (d == null) return null;
+    return _dateOnly(d);
+  }
+
+  DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
   /// 是否可精确调度（供 UI 判断是否需要引导用户开启精确闹钟权限）。
   Future<bool> canScheduleExact() async {
@@ -169,8 +203,8 @@ class NotificationService {
     }
   }
 
-  /// 启动时调用：清空旧的（可能是错误时区排的）调度，并按当前逻辑重建所有
-  /// 尚未完成的提醒。这样修复时区后无需重装也能恢复正常触发。
+  /// 启动时调用：清空旧的（可能是错误时区/错误调度模式的）调度，并按当前逻辑重建
+  /// 所有尚未完成的提醒。这样修复后无需重装也能恢复正常触发。
   Future<void> resyncPending(List<Reminder> reminders) async {
     if (_initialized == false) await init();
     if (kIsWeb) return;
@@ -186,6 +220,7 @@ class NotificationService {
           body: r.title,
           scheduledDate: dt,
           repeatWeekdays: r.repeatWeekdays,
+          repeatEndDate: r.repeatEndDate,
         );
       } catch (e) {
         // 单条失败不影响其余提醒的重建

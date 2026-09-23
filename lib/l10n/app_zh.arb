@@ -107,6 +107,24 @@
   "batteryOptimizationDesc": "允许后台闹钟，保证提醒准时触发",
   "batteryOptimizationOk": "已允许",
   "batteryOptimizationBlocked": "受限（点击修复）",
+  "autoStart": "自启动 / 允许后台运行",
+  "autoStartDesc": "国产系统必开：不开会在划掉应用后冻结提醒",
+  "autoStartDialogTitle": "还需要开启「自启动」",
+  "autoStartDialogMessage": "仅允许电池优化还不够。OPPO/vivo/小米/华为等系统如果没开「自启动 / 允许后台运行」，划掉应用后系统会冻结闹钟，提醒要等下次打开应用才补发。\n\n接下来请在系统页面里找到本应用，开启自启动（或允许后台运行）。",
+  "gotIt": "知道了",
+  "goToSettings": "前往设置",
+  "reminderDiagnostics": "提醒诊断",
+  "diagGranted": "已授权",
+  "diagDenied": "未授权",
+  "diagFix": "点击修复",
+  "diagSummary": "通知：{notification} · 精确闹钟：{exactAlarm} · 已注册 {pending} 条",
+  "@diagSummary": {
+    "placeholders": {
+      "notification": { "type": "String" },
+      "exactAlarm": { "type": "String" },
+      "pending": { "type": "String" }
+    }
+  },
   "language": "语言",
   "english": "英文",
   "simplifiedChinese": "简体中文",

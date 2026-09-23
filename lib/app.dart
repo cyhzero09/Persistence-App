@@ -6,6 +6,7 @@ import 'pages/settings_page.dart';
 import 'widgets/bottom_nav.dart';
 import 'providers/app_settings_provider.dart';
 import 'l10n/generated/app_localizations.dart';
+import 'utils/permission_wizard.dart';
 
 Locale _localeFromCode(String code) {
   final parts = code.split('_');
@@ -80,6 +81,17 @@ class _DailyTrackerAppState extends ConsumerState<DailyTrackerApp> {
             // builder 的 context 位于 Navigator 之上，showDialog 必须用 navigator 的 context
             final navContext = _navigatorKey.currentContext;
             if (navContext != null) _showLanguageDialog(navContext);
+          });
+        }
+        // 语言选完之后再跑权限引导，避免两个弹窗互相打断
+        if (settings.initialized && settings.languageChosen && !_permissionWizardRun) {
+          _permissionWizardRun = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if (!mounted) return;
+            await runStartupPermissionCheck();
+            if (!mounted) return;
+            final navContext = _navigatorKey.currentContext;
+            if (navContext != null) await maybePromptAutoStart(navContext);
           });
         }
         Widget effectiveChild = MediaQuery(

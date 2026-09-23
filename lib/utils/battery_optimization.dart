@@ -25,3 +25,22 @@ Future<bool> requestIgnoreBatteryOptimization() async {
     return false;
   }
 }
+
+/// 打开厂商「自启动 / 允许后台运行」设置页。
+/// 返回 true 表示跳到了厂商专属页面，false 表示已退回应用详情页兜底。
+Future<bool> openAutoStartSettings() async {
+  if (!_channelAvailable) return false;
+  try {
+    return await _channel.invokeMethod<bool>('openAutoStartSettings') ?? false;
+  } catch (_) {
+    return false;
+  }
+}
+
+/// 打开本应用的系统详情页。
+Future<void> openAppDetailsSettings() async {
+  if (!_channelAvailable) return;
+  try {
+    await _channel.invokeMethod<bool>('openAppDetailsSettings');
+  } catch (_) {}
+}

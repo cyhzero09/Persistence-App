@@ -22,6 +22,7 @@ import 'package:image_picker/image_picker.dart';
 import '../utils/background_image.dart';
 import '../utils/browser_launcher.dart';
 import '../utils/battery_optimization.dart';
+import '../notification_service.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -132,6 +133,8 @@ class SettingsPage extends ConsumerWidget {
             onTap: () => _showBackgroundPicker(context, ref),
           ),
           const _BatteryOptimizationTile(),
+          const _AutoStartTile(),
+          const _ReminderDiagnosticsTile(),
           const Divider(),
           const _SectionHeader(titleKey: 'language'),
           ListTile(
@@ -631,6 +634,135 @@ class _BatteryOptimizationTileState extends State<_BatteryOptimizationTile>
       },
     );
   }
+}
+
+/// 「自启动 / 允许后台运行」入口。
+/// 国产 ROM 只放行电池优化还不够：没开自启动，划掉应用后系统会冻结闹钟，
+/// 提醒要等下次打开应用才补发 —— 这是"关掉软件后不响"的直接原因。
+class _AutoStartTile extends StatelessWidget {
+  const _AutoStartTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return ListTile(
+      leading: const Icon(Icons.restart_alt),
+      title: Text(l10n.autoStart),
+      subtitle: Text(l10n.autoStartDesc),
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.autoStartDialogTitle),
+          content: Text(l10n.autoStartDialogMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.close),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                // 跳厂商自启动页；没有对应页面时原生侧会退回应用详情页
+                openAutoStartSettings();
+              },
+              child: Text(l10n.goToSettings),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 提醒诊断：一眼看出「关掉软件后不响」卡在哪一环。
+/// 通知权限、精确闹钟任一缺失都会让提醒被系统延迟或丢弃。
+class _ReminderDiagnosticsTile extends StatefulWidget {
+  const _ReminderDiagnosticsTile();
+
+  @override
+  State<_ReminderDiagnosticsTile> createState() => _ReminderDiagnosticsTileState();
+}
+
+class _ReminderDiagnosticsTileState extends State<_ReminderDiagnosticsTile>
+    with WidgetsBindingObserver {
+  late Future<_DiagInfo> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _future = _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 从系统设置授权回来（或新建提醒后）重新统计
+    if (state == AppLifecycleState.resumed) _reload();
+  }
+
+  void _reload() {
+    setState(() => _future = _load());
+  }
+
+  Future<_DiagInfo> _load() async {
+    final service = NotificationService();
+    return _DiagInfo(
+      notifications: await service.areNotificationsEnabled(),
+      exact: await service.canScheduleExact(),
+      pending: await service.pendingCount(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final cs = Theme.of(context).colorScheme;
+    return FutureBuilder<_DiagInfo>(
+      future: _future,
+      builder: (context, snap) {
+        final info = snap.data;
+        final ok = info == null || (info.notifications && info.exact);
+        return ListTile(
+          leading: Icon(
+            ok ? Icons.notifications_active : Icons.notifications_off,
+            color: ok ? null : cs.error,
+          ),
+          title: Text(l10n.reminderDiagnostics),
+          subtitle: Text(info == null
+              ? '...'
+              : l10n.diagSummary(
+                  info.notifications ? l10n.diagGranted : l10n.diagDenied,
+                  info.exact ? l10n.diagGranted : l10n.diagDenied,
+                  '${info.pending}',
+                )),
+          onTap: info == null
+              ? null
+              : () async {
+                  final service = NotificationService();
+                  if (!info.notifications) {
+                    await service.requestNotificationsPermission();
+                  } else if (!info.exact) {
+                    await service.requestExactAlarmPermission();
+                  }
+                  _reload();
+                },
+        );
+      },
+    );
+  }
+}
+
+class _DiagInfo {
+  final bool notifications;
+  final bool exact;
+  final int pending;
+  const _DiagInfo({required this.notifications, required this.exact, required this.pending});
 }
 
 class _SectionHeader extends StatelessWidget {

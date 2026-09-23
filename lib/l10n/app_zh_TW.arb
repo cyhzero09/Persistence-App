@@ -107,6 +107,24 @@
   "batteryOptimizationDesc": "允許背景鬧鐘，確保提醒準時觸發",
   "batteryOptimizationOk": "已允許",
   "batteryOptimizationBlocked": "受限（點擊修復）",
+  "autoStart": "自啟動 / 允許背景執行",
+  "autoStartDesc": "中國廠牌系統必開：不開會在滑掉應用後凍結提醒",
+  "autoStartDialogTitle": "還需要開啟「自啟動」",
+  "autoStartDialogMessage": "只允許電池最佳化還不夠。OPPO/vivo/小米/華為等系統如果沒開「自啟動 / 允許背景執行」，滑掉應用後系統會凍結鬧鐘，提醒要等下次打開應用才會補發。\n\n接下來請在系統頁面裡找到本應用，開啟自啟動（或允許背景執行）。",
+  "gotIt": "知道了",
+  "goToSettings": "前往設定",
+  "reminderDiagnostics": "提醒診斷",
+  "diagGranted": "已授權",
+  "diagDenied": "未授權",
+  "diagFix": "點擊修復",
+  "diagSummary": "通知：{notification} · 精確鬧鐘：{exactAlarm} · 已註冊 {pending} 條",
+  "@diagSummary": {
+    "placeholders": {
+      "notification": { "type": "String" },
+      "exactAlarm": { "type": "String" },
+      "pending": { "type": "String" }
+    }
+  },
   "language": "語言",
   "english": "英文",
   "simplifiedChinese": "簡體中文",

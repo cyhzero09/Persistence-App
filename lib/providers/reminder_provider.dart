@@ -46,6 +46,7 @@ class ReminderNotifier {
       body: notificationBody ?? companion.title.value,
       scheduledDate: dt,
       repeatWeekdays: _clampWeekdays(companion),
+      repeatEndDate: _clampEndDate(companion),
     ));
   }
 
@@ -53,6 +54,15 @@ class ReminderNotifier {
   String? _clampWeekdays(RemindersCompanion companion) {
     try {
       return companion.repeatWeekdays.value;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 安全读取 companion 中的 repeatEndDate（可能为 Value.absent()）。
+  String? _clampEndDate(RemindersCompanion companion) {
+    try {
+      return companion.repeatEndDate.value;
     } catch (_) {
       return null;
     }
@@ -87,6 +97,7 @@ class ReminderNotifier {
       body: r.title,
       scheduledDate: dt,
       repeatWeekdays: r.repeatWeekdays,
+      repeatEndDate: r.repeatEndDate,
     );
   }
 

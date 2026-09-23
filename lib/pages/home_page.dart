@@ -358,6 +358,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
             body: r.title,
             scheduledDate: dt,
             repeatWeekdays: r.repeatWeekdays,
+            repeatEndDate: r.repeatEndDate,
           );
         }
       }

@@ -214,6 +214,25 @@ class _AddCategorySheetState extends ConsumerState<AddCategorySheet> {
       if (cat.repeatWeekdays != null) {
         _weekdays.addAll(cat.repeatWeekdays!.split(',').map(int.parse));
       }
+      unawaited(_loadLinkedReminder(cat.id));
+    }
+  }
+
+  /// 编辑打卡项目时读回已关联的提醒，让「添加提醒」开关与时间显示当前设置。
+  Future<void> _loadLinkedReminder(int categoryId) async {
+    try {
+      final db = ref.read(databaseProvider);
+      final rows = await (db.select(db.reminders)
+            ..where((t) => t.categoryId.equals(categoryId)))
+          .get();
+      if (rows.isEmpty || !mounted) return;
+      final dt = DateTime.parse(rows.first.reminderDateTime);
+      setState(() {
+        _addReminder = true;
+        _reminderTime = TimeOfDay(hour: dt.hour, minute: dt.minute);
+      });
+    } catch (_) {
+      // 读取失败就按"未设置提醒"处理
     }
   }
 
@@ -453,55 +472,103 @@ class _AddCategorySheetState extends ConsumerState<AddCategorySheet> {
 
   Future<void> _save() async {
     final db = ref.read(databaseProvider);
+    final l10n = AppLocalizations.of(context);
+    final name = _nameController.text.trim();
     final weekdaysStr = _weekdays.join(',');
+    final desc = _descController.text.trim();
+    final startStr = DateFormat('yyyy-MM-dd').format(_startDate!);
+    final endStr = DateFormat('yyyy-MM-dd').format(_endDate!);
     final cat = widget.category;
+    final int catId;
     if (cat != null) {
       await (db.update(db.checkInCategories)
         ..where((t) => t.id.equals(cat.id)))
         .write(CheckInCategoriesCompanion(
-          name: Value(_nameController.text.trim()),
+          name: Value(name),
           emoji: Value(_emoji),
-          description: _descController.text.trim().isNotEmpty ? Value(_descController.text.trim()) : const Value.absent(),
-          startTime: Value(DateFormat('yyyy-MM-dd').format(_startDate!)),
-          endTime: Value(DateFormat('yyyy-MM-dd').format(_endDate!)),
+          description: desc.isNotEmpty ? Value(desc) : const Value.absent(),
+          startTime: Value(startStr),
+          endTime: Value(endStr),
           repeatWeekdays: Value(weekdaysStr),
         ));
-      ref.invalidate(categoriesProvider);
-      if (context.mounted) Navigator.pop(context);
+      catId = cat.id;
+    } else {
+      catId = await db.into(db.checkInCategories).insert(CheckInCategoriesCompanion.insert(
+        name: name,
+        emoji: _emoji,
+        description: desc.isNotEmpty ? Value(desc) : const Value.absent(),
+        startTime: Value(startStr),
+        endTime: Value(endStr),
+        repeatWeekdays: Value(weekdaysStr),
+      ));
+    }
+    // 打卡提醒：新增、编辑、关闭三种情况都要同步到 reminders 表与系统闹钟
+    await _syncCategoryReminder(db, catId: catId, name: name, weekdaysStr: weekdaysStr, l10n: l10n);
+    ref.invalidate(categoriesProvider);
+    ref.invalidate(remindersProvider);
+    if (context.mounted) Navigator.pop(context);
+  }
+
+  /// 把「打卡提醒」同步成 reminders 表里的一条记录，并维护系统闹钟。
+  /// 原先只在"新增打卡项目"时插入，编辑时既不更新也不删除，
+  /// 导致改了提醒时间后闹钟仍是旧的、关掉开关后提醒还在响。
+  Future<void> _syncCategoryReminder(
+    AppDatabase db, {
+    required int catId,
+    required String name,
+    required String weekdaysStr,
+    required AppLocalizations l10n,
+  }) async {
+    final existing = await (db.select(db.reminders)
+          ..where((t) => t.categoryId.equals(catId)))
+        .get();
+
+    // 开关关闭 → 删除关联提醒并取消系统闹钟
+    if (!_addReminder || _reminderTime == null) {
+      for (final r in existing) {
+        await (db.delete(db.reminders)..where((t) => t.id.equals(r.id))).go();
+        unawaited(NotificationService().cancelReminder(r.id));
+      }
       return;
     }
-    final catId = await db.into(db.checkInCategories).insert(CheckInCategoriesCompanion.insert(
-      name: _nameController.text.trim(),
-      emoji: _emoji,
-      description: _descController.text.trim().isNotEmpty ? Value(_descController.text.trim()) : const Value.absent(),
-      startTime: Value(DateFormat('yyyy-MM-dd').format(_startDate!)),
-      endTime: Value(DateFormat('yyyy-MM-dd').format(_endDate!)),
-      repeatWeekdays: Value(weekdaysStr),
-    ));
-    if (_addReminder && _reminderTime != null) {
-      final base = widget.selectedDate ?? DateTime.now();
-      final reminderDt = DateTime(
-          base.year, base.month, base.day,
-          _reminderTime!.hour, _reminderTime!.minute);
-      final id = await db.into(db.reminders).insert(RemindersCompanion.insert(
-        title: _nameController.text.trim(),
+
+    final base = widget.selectedDate ?? DateTime.now();
+    final reminderDt = DateTime(
+        base.year, base.month, base.day, _reminderTime!.hour, _reminderTime!.minute);
+
+    final int reminderId;
+    if (existing.isNotEmpty) {
+      reminderId = existing.first.id;
+      await (db.update(db.reminders)..where((t) => t.id.equals(reminderId))).write(
+        RemindersCompanion(
+          title: Value(name),
+          reminderDateTime: Value(reminderDt.toIso8601String()),
+          repeatWeekdays: Value(weekdaysStr),
+          isCompleted: const Value(false),
+        ),
+      );
+      // 历史遗留的多余关联记录一并清掉，避免重复通知
+      for (final r in existing.skip(1)) {
+        await (db.delete(db.reminders)..where((t) => t.id.equals(r.id))).go();
+        unawaited(NotificationService().cancelReminder(r.id));
+      }
+    } else {
+      reminderId = await db.into(db.reminders).insert(RemindersCompanion.insert(
+        title: name,
         reminderDateTime: reminderDt.toIso8601String(),
         repeatWeekdays: Value(weekdaysStr),
         categoryId: Value(catId),
       ));
-      final l10n = AppLocalizations.of(context);
-      // 通知调度在后台进行，不阻塞界面响应
-      unawaited(NotificationService().scheduleReminder(
-        id: id,
-        title: _nameController.text.trim(),
-        body: l10n.reminderNotification(_nameController.text.trim()),
-        scheduledDate: reminderDt,
-        repeatWeekdays: weekdaysStr,
-      ));
     }
-    ref.invalidate(categoriesProvider);
-    ref.invalidate(remindersProvider);
-    if (context.mounted) Navigator.pop(context);
+    // 先取消旧调度再重排，避免改了时间后旧闹钟还留着
+    await NotificationService().cancelReminder(reminderId);
+    await NotificationService().scheduleReminder(
+      id: reminderId,
+      title: name,
+      body: l10n.reminderNotification(name),
+      scheduledDate: reminderDt,
+      repeatWeekdays: weekdaysStr,
+    );
   }
 }
 
@@ -809,49 +876,50 @@ class _AddReminderSheetState extends ConsumerState<AddReminderSheet> {
           FilledButton(
             onPressed: _titleController.text.trim().isEmpty ? null : () async {
               final db = ref.read(databaseProvider);
+              final title = _titleController.text.trim();
               final reminderDt = _reminderTime != null
                   ? DateTime(_reminderDate.year, _reminderDate.month, _reminderDate.day, _reminderTime!.hour, _reminderTime!.minute)
                   : _reminderDate;
               final weekdaysStr = _selectedWeekdays.isNotEmpty ? _selectedWeekdays.join(',') : null;
+              final endDateStr = _reminderEndDate != null ? DateFormat('yyyy-MM-dd').format(_reminderEndDate!) : null;
               final companion = RemindersCompanion(
-                title: Value(_titleController.text.trim()),
+                title: Value(title),
                 reminderDateTime: Value(reminderDt.toIso8601String()),
                 repeatWeekdays: weekdaysStr != null ? Value(weekdaysStr) : const Value.absent(),
-                repeatEndDate: _reminderEndDate != null ? Value(DateFormat('yyyy-MM-dd').format(_reminderEndDate!)) : const Value.absent(),
+                repeatEndDate: endDateStr != null ? Value(endDateStr) : const Value.absent(),
               );
               if (widget.editReminder != null) {
+                final editId = widget.editReminder!.id;
                 await (db.update(db.reminders)
-                  ..where((t) => t.id.equals(widget.editReminder!.id)))
+                  ..where((t) => t.id.equals(editId)))
                   .write(companion);
                 ref.invalidate(remindersProvider);
                 if (context.mounted) Navigator.pop(context);
-                // 通知取消/重排在后台执行，不阻塞界面
+                // 先取消旧调度再重排；重复提醒即使今天这个点已过，也会排到下一次触发
                 unawaited(() async {
-                  await NotificationService().cancelReminder(widget.editReminder!.id);
-                  if (reminderDt.isAfter(DateTime.now())) {
-                    await NotificationService().scheduleReminder(
-                      id: widget.editReminder!.id,
-                      title: _titleController.text.trim(),
-                      body: l10n.reminderNotification(_titleController.text.trim()),
-                      scheduledDate: reminderDt,
-                      repeatWeekdays: weekdaysStr,
-                    );
-                  }
+                  await NotificationService().cancelReminder(editId);
+                  await NotificationService().scheduleReminder(
+                    id: editId,
+                    title: title,
+                    body: l10n.reminderNotification(title),
+                    scheduledDate: reminderDt,
+                    repeatWeekdays: weekdaysStr,
+                    repeatEndDate: endDateStr,
+                  );
                 }());
               } else {
                 final id = await db.into(db.reminders).insert(companion);
                 ref.invalidate(remindersProvider);
                 if (context.mounted) Navigator.pop(context);
                 // 通知调度在后台进行，不阻塞界面响应
-                if (reminderDt.isAfter(DateTime.now())) {
-                  unawaited(NotificationService().scheduleReminder(
-                    id: id,
-                    title: _titleController.text.trim(),
-                    body: l10n.reminderNotification(_titleController.text.trim()),
-                    scheduledDate: reminderDt,
-                    repeatWeekdays: weekdaysStr,
-                  ));
-                }
+                unawaited(NotificationService().scheduleReminder(
+                  id: id,
+                  title: title,
+                  body: l10n.reminderNotification(title),
+                  scheduledDate: reminderDt,
+                  repeatWeekdays: weekdaysStr,
+                  repeatEndDate: endDateStr,
+                ));
               }
             },
             child: Text(widget.editReminder != null ? l10n.save : l10n.add),

@@ -107,6 +107,24 @@
   "batteryOptimizationDesc": "Allow background alarms so reminders fire on time",
   "batteryOptimizationOk": "Allowed",
   "batteryOptimizationBlocked": "Restricted (tap to fix)",
+  "autoStart": "Auto-start / background running",
+  "autoStartDesc": "Required on Chinese ROMs: without it alarms freeze after you swipe the app away",
+  "autoStartDialogTitle": "Auto-start still needs to be enabled",
+  "autoStartDialogMessage": "Allowing battery optimization is not enough. On OPPO/vivo/Xiaomi/Huawei and similar systems, if \"Auto-start / Allow background running\" is off, the system freezes alarms after you swipe the app away and reminders only arrive the next time you open the app.\n\nOn the page that opens, find this app and enable auto-start (or allow background running).",
+  "gotIt": "Got it",
+  "goToSettings": "Go to settings",
+  "reminderDiagnostics": "Reminder diagnostics",
+  "diagGranted": "Granted",
+  "diagDenied": "Not granted",
+  "diagFix": "Tap to fix",
+  "diagSummary": "Notifications: {notification} · Exact alarms: {exactAlarm} · {pending} registered",
+  "@diagSummary": {
+    "placeholders": {
+      "notification": { "type": "String" },
+      "exactAlarm": { "type": "String" },
+      "pending": { "type": "String" }
+    }
+  },
   "language": "Language",
   "english": "English",
   "simplifiedChinese": "Simplified Chinese",
