@@ -137,6 +137,39 @@
   "account": "帳號",
   "loginGoogle": "登入 Google 帳號",
   "comingSoon": "即將推出",
+  "cloudAccount": "雲端存檔",
+  "cloudNotConfigured": "未啟用（本機未配置 Firebase）",
+  "signInWithGoogle": "使用 Google 帳號登入",
+  "signOut": "登出",
+  "uploadBackup": "上傳存檔到雲端",
+  "restoreFromCloud": "從雲端還原存檔",
+  "lastBackupAt": "上次備份：{time}",
+  "@lastBackupAt": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "noCloudBackup": "雲端還沒有備份",
+  "cloudBackupSize": "雲端存檔 {size}",
+  "@cloudBackupSize": {
+    "placeholders": {
+      "size": { "type": "String" }
+    }
+  },
+  "uploadBackupConfirm": "上傳會用本機目前資料覆蓋雲端存檔，確定繼續？",
+  "restoreConfirm": "從雲端還原會用雲端資料覆蓋本機全部打卡、日記和提醒，確定繼續？",
+  "uploadSuccess": "已上傳到雲端",
+  "restoreSuccess": "已從雲端還原",
+  "backupTooLarge": "資料太大，超出雲端單筆存檔上限",
+  "notSignedIn": "請先登入 Google 帳號",
+  "signInCanceled": "已取消登入",
+  "cloudOpFailed": "雲端操作失敗：{error}",
+  "@cloudOpFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "confirm": "確定",
   "versionText": "版本 {version}",
   "@versionText": {
     "placeholders": {

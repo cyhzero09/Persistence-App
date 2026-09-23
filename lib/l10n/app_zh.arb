@@ -137,6 +137,39 @@
   "account": "账号",
   "loginGoogle": "登录 Google 账号",
   "comingSoon": "即将推出",
+  "cloudAccount": "云端存档",
+  "cloudNotConfigured": "未启用（本地未配置 Firebase）",
+  "signInWithGoogle": "使用 Google 账号登录",
+  "signOut": "退出登录",
+  "uploadBackup": "上传存档到云端",
+  "restoreFromCloud": "从云端恢复存档",
+  "lastBackupAt": "上次备份：{time}",
+  "@lastBackupAt": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "noCloudBackup": "云端还没有备份",
+  "cloudBackupSize": "云端存档 {size}",
+  "@cloudBackupSize": {
+    "placeholders": {
+      "size": { "type": "String" }
+    }
+  },
+  "uploadBackupConfirm": "上传会用本机当前数据覆盖云端存档，确定继续？",
+  "restoreConfirm": "从云端恢复会用云端数据覆盖本机全部打卡、日记和提醒，确定继续？",
+  "uploadSuccess": "已上传到云端",
+  "restoreSuccess": "已从云端恢复",
+  "backupTooLarge": "数据太大，超出云端单条存档上限",
+  "notSignedIn": "请先登录 Google 账号",
+  "signInCanceled": "已取消登录",
+  "cloudOpFailed": "云端操作失败：{error}",
+  "@cloudOpFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "confirm": "确定",
   "versionText": "版本 {version}",
   "@versionText": {
     "placeholders": {

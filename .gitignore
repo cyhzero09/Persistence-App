@@ -56,3 +56,7 @@ lib/l10n/generated/
 
 # MCP config with credentials
 .mcp.json
+
+# Firebase 项目配置（含项目 ID / API Key），仅本地保存；
+# 缺失时云端功能自动降级，构建不受影响
+android/app/google-services.json

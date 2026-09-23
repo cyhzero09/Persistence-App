@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'app.dart';
+import 'app_version.dart';
+import 'cloud_service.dart';
 import 'notification_service.dart';
 import 'database/database.dart';
 import 'database/executor.dart';
@@ -36,6 +38,9 @@ void main() async {
   await initializeDateFormatting('en');
   await initializeDateFormatting('zh');
   await initializeDateFormatting('zh-TW');
+  await loadAppVersion();
+  // 云端不可用（如未配置 google-services.json）只降级，不阻塞启动
+  await CloudService().init();
   await NotificationService().init();
   await _resyncReminders();
   runApp(const ProviderScope(child: DailyTrackerApp()));

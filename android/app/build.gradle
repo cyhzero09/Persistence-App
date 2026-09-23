@@ -5,6 +5,13 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+// Firebase 的 Google 服务插件：只在放好 android/app/google-services.json 后才应用。
+// 缺这个文件时插件会直接让构建失败，而云端功能本来就是可选的，
+// 所以这里按文件存在与否条件应用 —— 没配置也能正常构建，云端功能自动降级。
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+}
+
 android {
     namespace = "com.persist.persistence_app"
     compileSdk = flutter.compileSdkVersion

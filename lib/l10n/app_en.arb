@@ -137,6 +137,39 @@
   "account": "Account",
   "loginGoogle": "Sign in with Google",
   "comingSoon": "Coming soon",
+  "cloudAccount": "Cloud backup",
+  "cloudNotConfigured": "Unavailable (Firebase not configured locally)",
+  "signInWithGoogle": "Sign in with Google",
+  "signOut": "Sign out",
+  "uploadBackup": "Upload backup to cloud",
+  "restoreFromCloud": "Restore backup from cloud",
+  "lastBackupAt": "Last backup: {time}",
+  "@lastBackupAt": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "noCloudBackup": "No backup in the cloud yet",
+  "cloudBackupSize": "Cloud backup {size}",
+  "@cloudBackupSize": {
+    "placeholders": {
+      "size": { "type": "String" }
+    }
+  },
+  "uploadBackupConfirm": "Uploading will overwrite the cloud backup with this device's data. Continue?",
+  "restoreConfirm": "Restoring will overwrite all check-ins, diaries and reminders on this device with the cloud data. Continue?",
+  "uploadSuccess": "Uploaded to the cloud",
+  "restoreSuccess": "Restored from the cloud",
+  "backupTooLarge": "Data is too large for a single cloud backup entry",
+  "notSignedIn": "Please sign in with Google first",
+  "signInCanceled": "Sign-in canceled",
+  "cloudOpFailed": "Cloud operation failed: {error}",
+  "@cloudOpFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "confirm": "Confirm",
   "versionText": "Version {version}",
   "@versionText": {
     "placeholders": {

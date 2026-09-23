@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' show Value;
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import '../database/database.dart' hide CheckInCategory, CheckInRecord, DiaryEntry, Reminder;
 import '../providers/database_provider.dart';
@@ -11,15 +11,15 @@ import '../providers/check_in_provider.dart';
 import '../providers/diary_provider.dart';
 import '../providers/reminder_provider.dart';
 import '../providers/app_settings_provider.dart';
-import '../models/check_in_category.dart';
-import '../models/check_in_record.dart';
-import '../models/diary_entry.dart';
 import '../models/reminder.dart';
 import '../app_version.dart';
 import '../update_checker.dart';
+import '../cloud_service.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../l10n/locale_helpers.dart';
 import 'package:image_picker/image_picker.dart';
 import '../utils/background_image.dart';
+import '../utils/backup.dart';
 import '../utils/browser_launcher.dart';
 import '../utils/battery_optimization.dart';
 import '../notification_service.dart';
@@ -160,17 +160,12 @@ class SettingsPage extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.system_update),
             title: Text(l10n.checkUpdate),
-            subtitle: const Text(appVersion),
+            subtitle: Text(appVersion),
             onTap: () => _checkUpdate(context),
           ),
           const Divider(),
           const _SectionHeader(titleKey: 'account'),
-          ListTile(
-            leading: const Icon(Icons.login),
-            title: Text(l10n.loginGoogle),
-            subtitle: Text(l10n.comingSoon),
-            enabled: false,
-          ),
+          const _AccountSection(),
           const Divider(),
           Center(
             child: Padding(
@@ -418,23 +413,11 @@ class SettingsPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     try {
       final db = ref.read(databaseProvider);
-      final cats = await db.select(db.checkInCategories).get();
-      final records = await db.select(db.checkInRecords).get();
-      final diaries = await db.select(db.diaryEntries).get();
-      final reminders = await db.select(db.reminders).get();
-
-      final data = {
-        'version': 1,
-        'exportDate': DateTime.now().toIso8601String(),
-        'categories': cats.map((r) => CheckInCategory(id: r.id, name: r.name, emoji: r.emoji, description: r.description, startTime: r.startTime, endTime: r.endTime, repeatWeekdays: r.repeatWeekdays, isDefault: r.isDefault).toJson()).toList(),
-        'records': records.map((r) => CheckInRecord(id: r.id, categoryId: r.categoryId, date: r.date, isCompleted: r.isCompleted, note: r.note, completedAt: r.completedAt).toJson()).toList(),
-        'diaries': diaries.map((r) => DiaryEntry(id: r.id, date: r.date, title: r.title, content: r.content, checkInRecordId: r.checkInRecordId).toJson()).toList(),
-        'reminders': reminders.map((r) => Reminder(id: r.id, title: r.title, dateTime: r.reminderDateTime, repeatWeekdays: r.repeatWeekdays, repeatEndDate: r.repeatEndDate, categoryId: r.categoryId, isCompleted: r.isCompleted).toJson()).toList(),
-      };
+      final jsonStr = await buildBackupJson(db);
 
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/daily_tracker_backup.json');
-      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
+      await file.writeAsString(jsonStr);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -519,41 +502,11 @@ class SettingsPage extends ConsumerWidget {
         return;
       }
 
-      final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      final jsonStr = await file.readAsString();
       final db = ref.read(databaseProvider);
-
-      await db.delete(db.reminders).go();
-      await db.delete(db.diaryEntries).go();
-      await db.delete(db.checkInRecords).go();
-      await db.delete(db.checkInCategories).go();
-
-      for (final c in json['categories'] as List) {
-        final m = CheckInCategory.fromJson(c as Map<String, dynamic>);
-        await db.into(db.checkInCategories).insert(CheckInCategoriesCompanion.insert(
-          name: m.name, emoji: m.emoji, description: m.description != null ? Value(m.description!) : const Value.absent(), startTime: m.startTime != null ? Value(m.startTime!) : const Value.absent(), endTime: m.endTime != null ? Value(m.endTime!) : const Value.absent(), repeatWeekdays: m.repeatWeekdays != null ? Value(m.repeatWeekdays!) : const Value.absent(), isDefault: Value(m.isDefault),
-        ));
-      }
-      for (final r in json['records'] as List) {
-        final m = CheckInRecord.fromJson(r as Map<String, dynamic>);
-        await db.into(db.checkInRecords).insert(CheckInRecordsCompanion.insert(
-          categoryId: m.categoryId, date: m.date, isCompleted: Value(m.isCompleted), note: Value(m.note), completedAt: m.completedAt != null ? Value(m.completedAt!) : const Value.absent(),
-        ));
-      }
-      for (final d in json['diaries'] as List) {
-        final m = DiaryEntry.fromJson(d as Map<String, dynamic>);
-        await db.into(db.diaryEntries).insert(DiaryEntriesCompanion.insert(
-          date: m.date, title: m.title != null ? Value(m.title!) : const Value.absent(), content: m.content, checkInRecordId: Value(m.checkInRecordId),
-        ));
-      }
-      for (final r in json['reminders'] as List) {
-        final m = Reminder.fromJson(r as Map<String, dynamic>);
-        await db.into(db.reminders).insert(RemindersCompanion.insert(
-          title: m.title, reminderDateTime: m.dateTime, repeatWeekdays: m.repeatWeekdays != null ? Value(m.repeatWeekdays!) : const Value.absent(),
-          repeatEndDate: m.repeatEndDate != null ? Value(m.repeatEndDate!) : const Value.absent(),
-          isCompleted: Value(m.isCompleted),
-          categoryId: m.categoryId != null ? Value(m.categoryId!) : const Value.absent(),
-        ));
-      }
+      await applyBackupJson(db, jsonStr);
+      // 导入回来的提醒必须重新排进系统闹钟，否则不会响
+      await resyncRemindersFromDb(db);
 
       ref.invalidate(categoriesProvider);
       ref.invalidate(checkInRecordDatesProvider);
@@ -763,6 +716,207 @@ class _DiagInfo {
   final bool exact;
   final int pending;
   const _DiagInfo({required this.notifications, required this.exact, required this.pending});
+}
+
+/// Google 账号 + 云端存档（Firebase Auth + Firestore）。
+/// 云端未配置（缺 android/app/google-services.json）时只显示一行提示，不影响其它功能。
+/// 存档结构复用本地导出/导入用的 [buildBackupJson] / [applyBackupJson]。
+class _AccountSection extends ConsumerStatefulWidget {
+  const _AccountSection();
+
+  @override
+  ConsumerState<_AccountSection> createState() => _AccountSectionState();
+}
+
+class _AccountSectionState extends ConsumerState<_AccountSection> {
+  final _cloud = CloudService();
+  bool _busy = false;
+  bool _infoLoaded = false;
+  CloudBackupInfo? _info;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInfo();
+  }
+
+  /// 读取云端存档的元信息（上次备份时间/大小）
+  Future<void> _loadInfo() async {
+    if (!_cloud.isReady || _cloud.user == null) return;
+    try {
+      final info = await _cloud.fetchBackupInfo();
+      if (!mounted) return;
+      setState(() {
+        _info = info;
+        _infoLoaded = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _infoLoaded = true);
+    }
+  }
+
+  String _errorText(AppLocalizations l10n, Object e) {
+    if (e is CloudException) {
+      return switch (e.code) {
+        'canceled' => l10n.signInCanceled,
+        'notConfigured' => l10n.cloudNotConfigured,
+        'notSignedIn' => l10n.notSignedIn,
+        'tooLarge' => l10n.backupTooLarge,
+        'noBackup' => l10n.noCloudBackup,
+        _ => l10n.cloudOpFailed(e.detail ?? e.code),
+      };
+    }
+    return l10n.cloudOpFailed('$e');
+  }
+
+  Future<bool> _confirm(String message) async {
+    final l10n = AppLocalizations.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.confirm)),
+        ],
+      ),
+    );
+    return ok ?? false;
+  }
+
+  Future<void> _run(Future<void> Function() action, String successText) async {
+    if (_busy) return;
+    final l10n = AppLocalizations.of(context);
+    setState(() => _busy = true);
+    try {
+      await action();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successText)));
+      await _loadInfo();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_errorText(l10n, e))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _signIn() => _run(() => _cloud.signIn(), AppLocalizations.of(context).signInWithGoogle);
+
+  Future<void> _signOut() async {
+    await _run(() async {
+      await _cloud.signOut();
+      _info = null;
+      _infoLoaded = false;
+    }, AppLocalizations.of(context).signOut);
+  }
+
+  Future<void> _upload() async {
+    final l10n = AppLocalizations.of(context);
+    if (!await _confirm(l10n.uploadBackupConfirm)) return;
+    if (!mounted) return;
+    final db = ref.read(databaseProvider);
+    await _run(() async {
+      await _cloud.uploadBackup(await buildBackupJson(db));
+    }, l10n.uploadSuccess);
+  }
+
+  Future<void> _restore() async {
+    final l10n = AppLocalizations.of(context);
+    if (!await _confirm(l10n.restoreConfirm)) return;
+    if (!mounted) return;
+    final db = ref.read(databaseProvider);
+    await _run(() async {
+      final jsonStr = await _cloud.downloadBackup();
+      if (jsonStr == null) throw const CloudException('noBackup');
+      await applyBackupJson(db, jsonStr);
+      // 恢复回来的提醒必须重新排进系统闹钟，否则不会响
+      await resyncRemindersFromDb(db);
+    }, l10n.restoreSuccess);
+    ref.invalidate(categoriesProvider);
+    ref.invalidate(checkInRecordDatesProvider);
+    ref.invalidate(diaryEntriesProvider);
+    ref.invalidate(remindersProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    if (!_cloud.isReady) {
+      return ListTile(
+        leading: const Icon(Icons.cloud_off),
+        title: Text(l10n.cloudAccount),
+        subtitle: Text(l10n.cloudNotConfigured),
+        enabled: false,
+      );
+    }
+
+    final user = _cloud.user;
+    if (user == null) {
+      return ListTile(
+        leading: const Icon(Icons.login),
+        title: Text(l10n.signInWithGoogle),
+        subtitle: Text(l10n.cloudAccount),
+        onTap: _busy ? null : _signIn,
+      );
+    }
+
+    final photoUrl = user.photoURL;
+    final subtitle = _info == null
+        ? (_infoLoaded ? l10n.noCloudBackup : '...')
+        : '${l10n.lastBackupAt(DateFormat('yyyy/M/d HH:mm', intlLocaleOf(context)).format(_info!.updatedAt))}'
+            ' · ${(_info!.sizeBytes / 1024).toStringAsFixed(1)} KB';
+
+    return Column(
+      children: [
+        ListTile(
+          leading: photoUrl != null
+              ? CircleAvatar(backgroundImage: NetworkImage(photoUrl))
+              : const CircleAvatar(child: Icon(Icons.person)),
+          title: Text(user.displayName ?? user.email ?? ''),
+          subtitle: Text(user.email ?? ''),
+        ),
+        ListTile(
+          leading: const Icon(Icons.cloud_upload),
+          title: Text(l10n.uploadBackup),
+          subtitle: Text(subtitle),
+          onTap: _busy ? null : _upload,
+        ),
+        ListTile(
+          leading: const Icon(Icons.cloud_download),
+          title: Text(l10n.restoreFromCloud),
+          enabled: _info != null && !_busy,
+          onTap: _busy ? null : _restore,
+        ),
+        ListTile(
+          leading: const Icon(Icons.logout),
+          title: Text(l10n.signOut),
+          onTap: _busy ? null : _signOut,
+        ),
+        if (_busy) const LinearProgressIndicator(),
+      ],
+    );
+  }
+}
+
+/// 把库里所有未完成的提醒重新排进系统闹钟。
+/// 本地导入/云端恢复之后必须调用，否则恢复回来的提醒不会触发。
+Future<void> resyncRemindersFromDb(AppDatabase db) async {
+  final rows = await db.select(db.reminders).get();
+  await NotificationService().resyncPending(
+    rows
+        .map((r) => Reminder(
+              id: r.id,
+              title: r.title,
+              dateTime: r.reminderDateTime,
+              repeatWeekdays: r.repeatWeekdays,
+              repeatEndDate: r.repeatEndDate,
+              categoryId: r.categoryId,
+              isCompleted: r.isCompleted,
+            ))
+        .toList(),
+  );
 }
 
 class _SectionHeader extends StatelessWidget {
